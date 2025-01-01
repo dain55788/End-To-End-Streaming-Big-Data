@@ -18,7 +18,7 @@
 + Containerization: Docker, Docker Compose
 
 ## Architecture
-![Screenshot 2024-12-26 220823](https://github.com/user-attachments/assets/595bae42-5384-47fb-ba2c-cb098b2a634c)
+![Screenshot 2025-01-01 183304](https://github.com/user-attachments/assets/90435ff4-1995-4011-95b0-4ab100ab297a)
 
 ## Setup
 ### Pre-requisites: 
