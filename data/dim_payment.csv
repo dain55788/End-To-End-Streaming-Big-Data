@@ -1,0 +1,8 @@
+payment_id,method,provider,processing_fee
+1,Credit Card,Visa,2.9
+2,Credit Card,MasterCard,2.9
+3,Credit Card,American Express,3.5
+4,PayPal,PayPal,2.9
+5,Bank Transfer,ACH,1.0
+6,Digital Wallet,Apple Pay,2.5
+7,Digital Wallet,Google Pay,2.5
