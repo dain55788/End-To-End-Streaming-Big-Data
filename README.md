@@ -1,33 +1,41 @@
 # End-To-End-Streaming-Big-Data
-## End-To-End Streaming Big Data Project makes processing big data easy.
+## End-To-End Streaming Big Data Project makes processing big data easy with Airflow, Kafka, Spark, Apache Hive and much more!!
 
 ## Top Contents:
-+ Core Websites (Python-Flask Deployment) and Data Handling with MySQL Workbench
-+ Automatically Email Sending with Apache Airflow and Sengrid
-+ Third-party payment method using payOS
-+ Project Report
++ Streaming Big Amount of Data using Kafka and SparkStreaming.
++ Managing Apache Kafka with Control Center, Apache Zookeeper and Schema Registry.
++ Automated Medallion Architecture using Data Orchestration Tools (Apache Airflow)
++ Processing Data Lake using DeltaLake, Object Storage with MinIO instead of AWS S3.
++ Third-party query engine Trino for High Query Performance.
++ Data Visualization Tools with PowerBI.
++ Project Report.
+
+## Dataset:
+This project uses fake created fact data related to e-commerce platform while streaming data with Kafka.
 
 ## Tools & Technologies
-+ Data Administration: MySQL Workbench
-+ Database: MySQL
++ Streaming Data Process: Apache Kafka, Apache Spark.
++ Data Warehouse: Apache Hive.
 + IDE: Pycharm
-+ Programming Languages:
-  + Front-End: HTML, CSS, Js & Bootstrap
-  + Backend: Python & Flask
-+ Data Orchestration: Apache Airflow
-+ Containerization: Docker, Docker Compose
++ Programming Languages: Python.
++ Data Orchestration Tool: Apache Airflow
++ Data Lake/ Data Lakehouse: DeltaLake, MinIO
++ Data Visualization Tool: PowerBI.
++ Query Engine: Trino.
++ Containerization: Docker, Docker Compose.
 
 ## Architecture
-![Screenshot 2025-01-01 183304](https://github.com/user-attachments/assets/90435ff4-1995-4011-95b0-4ab100ab297a)
+![System-Architecture](https://github.com/user-attachments/assets/527c749a-a9ce-44af-a447-c4c9b4b2738e)
 
 ## Setup
 ### Pre-requisites: 
-First, you'll your Pycharm IDE, MySQL Workbench, Docker and Apache Airflow setup in your project.
-Add your .env file and add YOUR_SENDGRID_API_KEY in the docker-compose.yml
+First, you'll your Pycharm IDE, Docker, Apache Kafka, Apache Spark and Apache Airflow setup in your project.
 
 ### How can I make this better?!
 A lot can still be done :)
 + Choose managed Infra
-  + Cloud Composer for Airflow
-+ Build dimensions and facts incrementally instead of full refresh
-+ Write data quality tests
+  + Cloud Composer for Airflow, Kafka and Spark.
++ Kafka Streaming process monitering with Prometheus and Grafana.
++ Include CI/CD Operations.
++ OLAP Operations for higher query performance with data warehouse.
++ Write data quality tests.
