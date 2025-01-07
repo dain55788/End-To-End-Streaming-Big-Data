@@ -34,8 +34,9 @@ First, you'll your Pycharm IDE, Docker, Apache Kafka, Apache Spark and Apache Ai
 ### How can I make this better?!
 A lot can still be done :)
 + Choose managed Infra
-  + Cloud Composer for Airflow, Kafka and Spark.
+  + Cloud Composer for Airflow, Kafka and Spark using AWS.
 + Kafka Streaming process monitering with Prometheus and Grafana.
 + Include CI/CD Operations.
 + OLAP Operations for higher query performance with data warehouse.
 + Write data quality tests.
++ Storage Layer Deployment with AWS S3 and Terraform.
