@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from pyspark.sql import SparkSession
 from pyhive import hive
 from pyspark.sql.functions import from_json, col
-
+from os.path import abspath
 
 # logging basic file core:-
 logging.basicConfig(filename="log.txt", level=logging.DEBUG,
@@ -26,18 +26,26 @@ def create_spark_session(app_name, master="yarn", enable_hive=True, hive_metasto
             spark_con: Spark Session
         Connection: SparkSQL-Kafka, Spark-Hive, Spark-HiveMetastore
     """
+
+    # NOTE: FIX THE WAREHOUSE_LOCATION VARIABLE AND CONTINUE TO CONNECT SPARK TO HIVE METASTORE
     spark_con = None
+    warehouse_location = abspath('spark_warehouse')
     try:
+        # Configuration for Spark
         spark_builder = SparkSession.builder \
             .appName(app_name) \
             .config('spark.jars.packages', "org.apache.spark:spark-sql-kafka_streaming-0-10_2.13:3.4.4,"
                                            "org.apache.spark:spark-hive_2.13:3.4.4,"
                                            "org.apache.hive:hive-metastore:4.0.1") \
             .enableHiveSupport() \
-            .master(master) \
+            .master(master)
 
         if hive_metastore_uri:
             spark_builder = spark_builder.config('hive.metastore.uris', hive_metastore_uri)
+
+        # Configuration for Hive Metastore
+        spark_builder = spark_builder.config("spark.sql.warehouse.dir", warehouse_location)\
+            .config("spark.sql.catalogImplementation", "hive")
 
         spark_con = spark_builder.getOrCreate()
         spark_con.sparkContext.setLogLevel("ERROR")

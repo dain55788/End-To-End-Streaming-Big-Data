@@ -1,3 +1,4 @@
-from src import integration
+from os.path import abspath
 
-exec("integration")
+warehouse_location = abspath('spark-warehouse')
+print(warehouse_location)

@@ -4,10 +4,8 @@ from schema import *
 from kafka_streaming.events.kafka_utils import *
 from src.integration import setup_warehouse, load_all_dimension_tables
 
-# Run the script using the following command to submit spark job
-# spark-submit \
-#   --packages org.apache.spark:spark-sql-kafka_streaming-0-10_2.13:3.4.4 \
-# spark_streaming_events.py
+# Run the script using the following command to submit spark job (run in the spark_streaming directory)
+# %SPARK_HOME%\bin\spark-submit --packages org.apache.spark:spark-sql-kafka-0-10_2.13:3.4.4 spark_streaming_events.py
 
 username = 'nguyendai'
 
