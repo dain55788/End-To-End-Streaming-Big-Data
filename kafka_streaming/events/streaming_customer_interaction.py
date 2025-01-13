@@ -172,7 +172,7 @@ class ProductReviewProducer:
 
 if __name__ == "__main__":
     # Configure Kafka producer settings
-    BATCH_SIZE = 1000
+    BATCH_SIZE = 100  # Modify this back to 1000
     INTERVAL_SECONDS = 3
 
     # Create and start producer

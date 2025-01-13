@@ -3,7 +3,11 @@ from datetime import datetime, timedelta
 from pyspark.sql import SparkSession
 from pyhive import hive
 from pyspark.sql.functions import from_json, col
+import os
 from os.path import abspath
+
+# JAVA_HOME Congif
+os.environ['JAVA_HOME'] = r"C:\Program Files\Java\jdk-17"
 
 # logging basic file core:-
 logging.basicConfig(filename="log.txt", level=logging.DEBUG,
@@ -13,7 +17,7 @@ logging.basicConfig(filename="log.txt", level=logging.DEBUG,
 
 
 # Create Spark Session function
-def create_spark_session(app_name, master="yarn", enable_hive=True, hive_metastore_uri=None):
+def create_spark_session(app_name, master="spark://spark-master", enable_hive=True, hive_metastore_uri=None):
     # Create or get spark session with yarn master
     """
         Create Spark Session using builder for configuration
@@ -35,8 +39,8 @@ def create_spark_session(app_name, master="yarn", enable_hive=True, hive_metasto
         spark_builder = SparkSession.builder \
             .appName(app_name) \
             .config('spark.jars.packages', "org.apache.spark:spark-sql-kafka_streaming-0-10_2.13:3.4.4,"
-                                           "org.apache.spark:spark-hive_2.13:3.4.4,"
                                            "org.apache.hive:hive-metastore:4.0.1") \
+            .config("spark.driver.extraJavaOptions", "-XX:+ShowCodeDetailsInExceptionMessages") \
             .enableHiveSupport() \
             .master(master)
 
@@ -50,10 +54,10 @@ def create_spark_session(app_name, master="yarn", enable_hive=True, hive_metasto
         spark_con = spark_builder.getOrCreate()
         spark_con.sparkContext.setLogLevel("ERROR")
         logging.info(f"Successfully create Spark Session!!")
+        return spark_con
     except Exception as e:
         logging.error(f"Couldn't create spark session due to exception {e}!!")
-
-    return spark_con
+        raise
 
 
 # Create Spark Connection to Hive
@@ -78,8 +82,8 @@ def create_kafka_read_stream(spark, kafka_address, kafka_port, topic, starting_o
     try:
         read_stream = (spark
                         .readStream
-                        .format("kafka_streaming")
-                        .option("kafka_streaming.bootstrap.servers", f"{kafka_address}: {kafka_port}")
+                        .format("kafka")
+                        .option("kafka_streaming.bootstrap.servers", f"{kafka_address}:{kafka_port}")
                         .option("failOnDataLoss", False)
                         .option("startingOffsets", starting_offset)
                         .option("subscribe", topic)
@@ -89,7 +93,7 @@ def create_kafka_read_stream(spark, kafka_address, kafka_port, topic, starting_o
         return read_stream
     except Exception as e:
         logging.error(f"Fail to create read stream from kafka_streaming with error {e}")
-        return None
+        raise
 
 
 # Process read stream from Kafka
@@ -136,16 +140,21 @@ def create_write_stream_to_hive(processed_stream, checkpoint_path, table_name, t
         streaming_query: StreamingQuery
     """
     try:
+        def write_to_hive(batch_df, batch_id):
+            if not batch_df.isEmpty():
+                batch_df.write.mode("append").saveAsTable(table_name)
+
         streaming_query = (processed_stream
                            .writeStream
                            .format("hive")
-                           .outputMode("append")
+                           .foreachBatch(write_to_hive)
                            .option("checkpointLocation", f"{checkpoint_path}/{table_name}")
                            .trigger(processingTime=trigger_interval)
-                           .toTable(table_name))
+                           .toTable(table_name)
+                           .start())
 
         logging.info(f"Successfully created write stream to Hive table: {table_name}")
         return streaming_query
     except Exception as e:
         logging.error(f"Failed to create write stream to Hive because of Error: {e}")
-        return None
+        raise

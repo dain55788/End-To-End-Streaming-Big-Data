@@ -138,7 +138,7 @@ class CustomerInteractionProducer:
 
 if __name__ == "__main__":
     # Configure Kafka producer settings
-    BATCH_SIZE = 100
+    BATCH_SIZE = 10  # Modify back to 100
     INTERVAL_SECONDS = 3
 
     # Create and start producer

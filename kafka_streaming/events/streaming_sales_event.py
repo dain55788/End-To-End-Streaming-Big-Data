@@ -105,7 +105,7 @@ class SalesEventProducer:
 
 if __name__ == "__main__":
     # Configure Kafka producer settings
-    BATCH_SIZE = 10000
+    BATCH_SIZE = 100  # Modify back to 10000
     INTERVAL_SECONDS = 4
 
     # Create and start producer
