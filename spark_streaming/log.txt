@@ -1,9 +1,0 @@
-11-Jan-25 17:32:41 - Couldn't create spark session due to exception Java gateway process exited before sending its port number!!
-11-Jan-25 17:35:25 - Couldn't create spark session due to exception Java gateway process exited before sending its port number!!
-11-Jan-25 18:50:48 - Couldn't create spark session due to exception Java gateway process exited before sending its port number!!
-11-Jan-25 23:45:46 - Couldn't create spark session due to exception Java gateway process exited before sending its port number!!
-12-Jan-25 00:18:26 - Couldn't create spark session due to exception Java gateway process exited before sending its port number!!
-12-Jan-25 01:01:50 - Couldn't create spark session due to exception Java gateway process exited before sending its port number!!
-13-Jan-25 00:18:14 - Couldn't create spark session due to exception Java gateway process exited before sending its port number!!
-13-Jan-25 00:42:47 - Couldn't create spark session due to exception Java gateway process exited before sending its port number!!
-13-Jan-25 00:47:30 - Couldn't create spark session due to exception Java gateway process exited before sending its port number!!
