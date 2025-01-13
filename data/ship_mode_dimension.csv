@@ -1,0 +1,5 @@
+ship_mode_key,ship_mode_name,ship_mode_type,carrier_name,carrier_city,carrier_country,carrier_primary_postal_code,contact_phone_number
+1,Standard Ground,Ground,FedEx,Memphis,USA,38120,1-800-463-3339
+2,Express Air,Air,UPS,Louisville,USA,40202,1-800-742-5877
+3,Next Day Air,Air,DHL,Bonn,Germany,53113,1-800-225-5345
+4,Freight,Ground,USPS,Washington,USA,20260,1-800-275-8777
