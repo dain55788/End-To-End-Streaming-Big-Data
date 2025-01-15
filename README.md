@@ -4,28 +4,31 @@
 ## Top Contents:
 + Streaming Big Amount of Data using Kafka and SparkStreaming.
 + Managing Apache Kafka with Control Center, Apache Zookeeper and Schema Registry.
++ Snowflake Data Warehouse 
 + Automated Medallion Architecture using Data Orchestration Tools (Apache Airflow)
-+ Processing Data Lake using DeltaLake, Object Storage with MinIO instead of AWS S3.
-+ Third-party query engine Trino for High Query Performance.
-+ Data Visualization Tools with PowerBI.
++ Processing Data Lake using DeltaLake, Object Storage with MinIO compatible with AWS S3.
++ Third-party query engine Snowflake for High Query Performance.
++ Data Visualization Tools with Superset.
 + Project Report.
 
 ## Dataset:
 This project uses fake created fact data related to e-commerce platform while streaming data with Kafka.
 
+## Schema Model
+![schema_model](https://github.com/user-attachments/assets/4727ee2f-8403-4c20-b473-b9a28553ca9b)
+
 ## Tools & Technologies
 + Streaming Data Process: Apache Kafka, Apache Spark.
-+ Data Warehouse: Apache Hive.
++ Data Warehouse: Snowflake
 + IDE: Pycharm
 + Programming Languages: Python.
 + Data Orchestration Tool: Apache Airflow
 + Data Lake/ Data Lakehouse: DeltaLake, MinIO
-+ Data Visualization Tool: PowerBI.
-+ Query Engine: Trino.
++ Data Visualization Tool: Superset
 + Containerization: Docker, Docker Compose.
 
 ## Architecture
-![System-Architecture](https://github.com/user-attachments/assets/527c749a-a9ce-44af-a447-c4c9b4b2738e)
+![System-Architecture](https://github.com/user-attachments/assets/d7a2d426-8d96-4ca8-9097-03f95f71c53d)
 
 ## Setup
 ### Pre-requisites: 
