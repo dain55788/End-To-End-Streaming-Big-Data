@@ -14,7 +14,7 @@
 ## Dataset:
 This project uses fake created fact data related to e-commerce platform while streaming data with Kafka.
 
-## Schema Model
+## Star Schema Model
 ![schema_model](https://github.com/user-attachments/assets/4727ee2f-8403-4c20-b473-b9a28553ca9b)
 
 ## Tools & Technologies
