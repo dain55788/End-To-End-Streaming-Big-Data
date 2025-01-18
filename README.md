@@ -32,14 +32,15 @@ This project uses fake created fact data related to e-commerce platform while st
 
 ## Setup
 ### Pre-requisites: 
-First, you'll your Pycharm IDE, Docker, Apache Kafka, Apache Spark and Apache Airflow setup in your project.
++ First, you'll have your Pycharm IDE, Docker, Apache Kafka, Apache Spark and Apache Airflow setup in your project.
++ Launch Docker, run event_streaming python file in Kafka events
 
 ### How can I make this better?!
 A lot can still be done :)
 + Choose managed Infra
   + Cloud Composer for Airflow, Kafka and Spark using AWS.
 + Kafka Streaming process monitering with Prometheus and Grafana.
-+ Include CI/CD Operations.
++ Include CI/CD Operations .
 + OLAP Operations for higher query performance with data warehouse.
 + Write data quality tests.
 + Storage Layer Deployment with AWS S3 and Terraform.
