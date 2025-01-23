@@ -1,7 +1,8 @@
 from datetime import datetime
-from confluent_kafka import Producer
-from confluent_kafka.admin import AdminClient, NewTopic
 from kafka_streaming.utils.kafka_utils import *
+import pandas as pd
+import numpy as np
+import time
 
 # Kafka Configuration
 KAFKA_BOOTSTRAP_SERVERS = 'localhost:9092'
