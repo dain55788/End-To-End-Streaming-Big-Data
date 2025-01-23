@@ -12,125 +12,196 @@ from pyspark.sql.functions import *
 
 # Dimensional Table schema
 dim_customer = StructType([
-    StructField("customer_id", IntegerType(), False),  # Primary key
-    StructField("first_name", StringType(), True),
-    StructField("last_name", StringType(), True),
-    StructField("phone", StringType(), True),
-    StructField("email", StringType(), True),
-    StructField("segment", StringType(), True),
-    StructField("created_at", TimestampType(), True)
+    StructField("customer_key", IntegerType(), False),  # Primary key
+    StructField("cust_first_name", StringType(), False),
+    StructField("cust_last_name", StringType(), False),
+    StructField("cust_full_name", StringType(), False),
+    StructField("cust_birth_day", DateType(), True),
+    StructField("cust_gender", StringType(), True),
+    StructField("cust_title", StringType(), True),
+    StructField("contact_phone_number", StringType(), False),
+    StructField("cust_email_address", StringType(), False),
+    StructField("cust_phone", StringType(), False),
+    StructField("cust_address", StringType(), False),
+    StructField("cust_state", StringType(), True),
+    StructField("cust_city", StringType(), True),
+    StructField("cust_country", StringType(), True),
+    StructField("cust_zipcode", StringType(), False),
+    StructField("cust_primary_language", StringType(), True),
+    StructField("cust_primary_postal_code", StringType(), False),
 ])
 
 dim_product = StructType([
-    StructField("product_id", IntegerType(), False),  # Primary key
-    StructField("product_name", StringType(), True),
-    StructField("category", StringType(), True),
-    StructField("subcategory", StringType(), True),
-    StructField("brand", StringType(), True),
-    StructField("base_price", DecimalType(10, 2), True),
-    StructField("supplier", StringType(), True),
-    StructField("is_active", IntegerType(), True),
-    StructField("valid_from", TimestampType(), True),
-    StructField("created_at", TimestampType(), True)
-])
-
-dim_payment = StructType([
-    StructField("payment_id", IntegerType(), False),  # Primary key
-    StructField("method", StringType(), True),
-    StructField("status", StringType(), True),
-    StructField("provider", StringType(), True),
-    StructField("processing_fee", DecimalType(10, 2), True),
-    StructField("created_at", TimestampType(), True)
+   StructField("product_key", IntegerType(), False),
+   StructField("sku_number", StringType(), False),
+   StructField("product_description", StringType(), False),
+   StructField("package_type", StringType(), False),
+   StructField("package_size", StringType(), False),
+   StructField("size", StringType(), False),
+   StructField("color", StringType(), False),
+   StructField("brand", StringType(), False),
+   StructField("category", StringType(), False),
+   StructField("subcategory", StringType(), False),
+   StructField("department", StringType(), False),
+   StructField("manufacturer", StringType(), False),
+   StructField("weight", IntegerType(), False),
+   StructField("unit_of_measure", StringType(), False),
+   StructField("unit_price_base", IntegerType(), False)
 ])
 
 dim_location = StructType([
-    StructField("location_id", IntegerType(), False),  # Primary key
+    StructField("location_key", IntegerType(), False),  # Primary key
+    StructField("location_name", StringType(), False),
+    StructField("address", StringType(), False),
     StructField("city", StringType(), True),
     StructField("state", StringType(), True),
+    StructField("source", StringType(), True),
     StructField("country", StringType(), True),
-    StructField("postal_code", StringType(), True),
-    StructField("timezone", StringType(), True),
     StructField("region", StringType(), True),
-    StructField("created_at", TimestampType(), True)
+    StructField("international_code", StringType(), False),
+    StructField("postal_code", StringType(), False),
 ])
 
-dim_channel = StructType([
-    StructField("channel_id", IntegerType(), False),  # Primary key
-    StructField("channel_name", StringType(), True),
-    StructField("channel_type", StringType(), True),
-    StructField("description", StringType(), True),
-    StructField("created_at", TimestampType(), True)
+dim_warehouse = StructType([
+    StructField("warehouse_key", IntegerType(), False),
+    StructField("warehouse_name", StringType(), False),
+    StructField("warehouse_manager", StringType(), True),
+    StructField("warehouse_address", StringType(), False),
+    StructField("warehouse_city", StringType(), True),
+    StructField("warehouse_state", StringType(), True),
+    StructField("warehouse_country", StringType(), True),
+    StructField("warehouse_postal_code", StringType(), False),
+    StructField("warehouse_staff_count", IntegerType(), True),
+    StructField("warehouse_space_used", IntegerType(), True)
+])
+
+dim_promotion = StructType([
+    StructField("promotion_key", IntegerType(), False),
+    StructField("promotion_name", StringType(), False),
+    StructField("promotion_type", StringType(), True),
+    StructField("promotion_channel", StringType(), True),
+    StructField("promotion_desc", StringType(), True),
+    StructField("display_type", StringType(), False),
+    StructField("display_location", StringType(), True),
+    StructField("display_provider", StringType(), True),
+    StructField("promo_cost", DoubleType(), False),
+    StructField("promo_begin_date", DateType(), False),
+    StructField("promo_end_date", DateType(), False)
+])
+
+dim_website = StructType([
+    StructField("website_key", IntegerType(), False),
+    StructField("website_name", StringType(), False),
+    StructField("website_url", StringType(), False),
+    StructField("website_type", StringType(), False),
+    StructField("website_category", StringType(), False),
+    StructField("website_description", StringType(), True),
+    StructField("navigation_urls", StringType(), False),
+    StructField("banner_name", StringType(), True),
+    StructField("tool_bar", StringType(), True),
+    StructField("number_of_products_per_page", IntegerType(), False),
+    StructField("search_available", StringType(), True),
+    StructField("site_placement", StringType(), True)
+])
+
+dim_navigation = StructType([
+   StructField("navigation_key", IntegerType(), False),
+   StructField("from_the_url", StringType(), False),
+   StructField("to_the_url", StringType(), False),
+   StructField("refer_url", StringType(), False),
+   StructField("landing_url", StringType(), False),
+   StructField("exit_url", StringType(), False),
+   StructField("search_url", StringType(), False),
+   StructField("signin_url", StringType(), False),
+   StructField("signup_url", StringType(), False),
+   StructField("checkout_url", StringType(), False),
+   StructField("payment_url", StringType(), False),
+   StructField("floorplan_url", StringType(), False),
+   StructField("forum_url", StringType(), False),
+   StructField("blog_url", StringType(), False),
+   StructField("social_media_access_flag", StringType(), False),
+   StructField("page_access_flag", StringType(), False),
+   StructField("page_description", StringType(), True)
+])
+
+dim_ship_mode = StructType([
+   StructField("ship_mode_key", IntegerType(), False),
+   StructField("ship_mode_name", StringType(), False),
+   StructField("ship_mode_type", StringType(), False),
+   StructField("carrier_name", StringType(), False),
+   StructField("carrier_id", StringType(), False),
+   StructField("carrier_country", StringType(), False),
+   StructField("carrier_primary_postal_code", StringType(), False),
+   StructField("contact_phone_number", StringType(), False)
 ])
 
 dim_date = StructType([
-    StructField("date_id", IntegerType(), False),  # Primary key
-    StructField("full_date", DateType(), True),
-    StructField("year", IntegerType(), True),
-    StructField("quarter", IntegerType(), True),
-    StructField("month", IntegerType(), True),
-    StructField("week", IntegerType(), True),
-    StructField("day", IntegerType(), True),
-    StructField("is_weekend", IntegerType(), True),
-    StructField("is_holiday", IntegerType(), True),
-    StructField("created_at", TimestampType(), True)
+   StructField("date_key", IntegerType(), False),
+   StructField("calendar_date", DateType(), False),
+   StructField("calendar_month_number", IntegerType(), False),
+   StructField("day_number_overall", IntegerType(), False),
+   StructField("day_of_week", StringType(), False),
+   StructField("day_of_week_number", IntegerType(), False),
+   StructField("week_number", IntegerType(), False),
+   StructField("week_desc_current", IntegerType(), False),
+   StructField("month", StringType(), False),
+   StructField("month_number_current", IntegerType(), False),
+   StructField("fiscal_year", StringType(), False),
+   StructField("fiscal_year_month", StringType(), False),
+   StructField("holiday", StringType(), False),
+   StructField("holiday_flag", StringType(), False),
+   StructField("special_day", StringType(), False),
+   StructField("season", StringType(), False),
+   StructField("event", StringType(), False)
+])
+
+dim_time = StructType([
+   StructField("time_key", IntegerType(), False),
+   StructField("time_desc", StringType(), False),
+   StructField("hour_24", IntegerType(), False),
+   StructField("am_pm_flag", StringType(), False),
+   StructField("morning_flag", StringType(), False),
+   StructField("afternoon_flag", StringType(), False),
+   StructField("evening_flag", StringType(), False),
+   StructField("late_evening_flag", StringType(), False)
 ])
 
 # Fact Tables Schemas
-fact_sales = StructType([
-    StructField("sale_id", IntegerType(), False),  # Primary key
-    StructField("order_id", IntegerType(), True),
-    StructField("customer_id", IntegerType(), True),  # Foreign key
-    StructField("product_id", IntegerType(), True),  # Foreign key
-    StructField("date_id", IntegerType(), True),     # Foreign key
-    StructField("location_id", IntegerType(), True),  # Foreign key
-    StructField("payment_id", IntegerType(), True),  # Foreign key
-    StructField("order_datetime", TimestampType(), True),
-    StructField("quantity", IntegerType(), True),
-    StructField("unit_price", DecimalType(10, 2), True),
-    StructField("discount", DecimalType(10, 2), True),
-    StructField("total_amount", DecimalType(10, 2), True),
-    StructField("tax", DecimalType(10, 2), True),
-    StructField("created_at", TimestampType(), True)
-])
-
-fact_product_review = StructType([
-    StructField("review_id", IntegerType(), False),  # Primary key
-    StructField("product_id", IntegerType(), True),  # Foreign key
-    StructField("customer_id", IntegerType(), True),  # Foreign key
-    StructField("date_id", IntegerType(), True),     # Foreign key
-    StructField("rating", IntegerType(), True),
-    StructField("review_text", StringType(), True),
-    StructField("helpful_votes", IntegerType(), True),
-    StructField("is_verified_purchase", IntegerType(), True),
-    StructField("created_at", TimestampType(), True)
-])
-
-fact_customer_interaction = StructType([
-    StructField("interaction_id", IntegerType(), False),  # Primary key
-    StructField("customer_id", IntegerType(), True),      # Foreign key
-    StructField("date_id", IntegerType(), True),          # Foreign key
-    StructField("channel_id", IntegerType(), True),       # Foreign key
-    StructField("interaction_type", StringType(), True),
-    StructField("resolution_status", StringType(), True),
-    StructField("duration_seconds", IntegerType(), True),
-    StructField("interaction_details", StringType(), True),
-    StructField("created_at", TimestampType(), True)
+sales_fact_table = StructType([
+    StructField("product_key", IntegerType(), False),
+    StructField("time_key", IntegerType(), False),
+    StructField("date_key", IntegerType(), False),
+    StructField("warehouse_key", IntegerType(), False),
+    StructField("promotion_key", IntegerType(), False),
+    StructField("customer_key", IntegerType(), False),
+    StructField("location_key", IntegerType(), False),
+    StructField("website_key", IntegerType(), False),
+    StructField("navigation_key", IntegerType(), False),
+    StructField("ship_mode_key", IntegerType(), False),
+    StructField("total_order_quantity", IntegerType(), False),
+    StructField("line_item_discount_amount", DoubleType(), False),
+    StructField("line_item_sale_amount", DoubleType(), False),
+    StructField("line_item_list_price", DoubleType(), False),
+    StructField("average_line_item_sale", DoubleType(), False),
+    StructField("average_line_item_list_price", DoubleType(), False)
 ])
 
 table_schemas = {
     "dim_customer": dim_customer,
     "dim_product": dim_product,
-    "dim_payment": dim_payment,
     "dim_location": dim_location,
-    "dim_channel": dim_channel,
+    "dim_warehouse": dim_warehouse,
+    "dim_promotion": dim_promotion,
+    "dim_website": dim_website,
+    "dim_navigation": dim_navigation,
+    "dim_ship_mode": dim_ship_mode,
     "dim_date": dim_date,
-    "fact_sales": fact_sales,
-    "fact_product_review": fact_product_review,
-    "fact_customer_interaction": fact_customer_interaction
+    "dim_time": dim_time,
+    "sales_fact": sales_fact_table
 }
 
 
-# Helper function to get schema table:
+# helper function to get schema table:
 def get_schema_table(table_name):
     """
      Get the Spark schema for a given table name
