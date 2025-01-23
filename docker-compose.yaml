@@ -1,4 +1,8 @@
 version: '3.8'
+x-spark-common: &spark-common
+  image: bitnami/spark:3.5.0
+  networks:
+    - confluent
 
 services:
   zookeeper:
@@ -40,6 +44,11 @@ services:
       KAFKA_CONFLUENT_BALANCER_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_NUM_PARTITIONS: 10
+      KAFKA_LOG_RETENTION_BYTES: 1073741824  # 1GB
+      KAFKA_SOCKET_RECEIVE_BUFFER_BYTES: 1048576
+      KAFKA_SOCKET_SEND_BUFFER_BYTES: 1048576
+      KAFKA_MAX_MESSAGE_BYTES: 5242880  # 5MB
       KAFKA_JMX_PORT: 9101
       KAFKA_JMX_HOSTNAME: localhost
       KAFKA_CONFLUENT_SCHEMA_REGISTRY_URL: http://schema-registry:8081
@@ -75,6 +84,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
+
   control-center:
     image: confluentinc/cp-enterprise-control-center:7.4.0
     hostname: control-center
@@ -104,25 +114,27 @@ services:
       retries: 5
 
   spark-master:
-    image: bitnami/spark:latest
+    <<: *spark-common
     command: bin/spark-class org.apache.spark.deploy.master.Master
     ports:
-      - "9090:8080"
+      - "9190:8080"
       - "7077:7077"
-    networks:
-      - confluent
-  spark-worker:
-    image: bitnami/spark:latest
+      - "4040:4040"
+      - "8181:8181"
+
+  spark-worker: &spark-worker-image
+    <<: *spark-common
     command: bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
     depends_on:
       - spark-master
     environment:
       SPARK_MODE: worker
-      SPARK_WORKER_CORES: 2
+      SPARK_WORKER_CORE: 2
       SPARK_WORKER_MEMORY: 2g
       SPARK_MASTER_URL: spark://spark-master:7077
-    networks:
-      - confluent
+
+  spark-worker-2:
+    <<: *spark-worker-image
 
 networks:
   confluent:

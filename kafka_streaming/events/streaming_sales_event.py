@@ -1,120 +1,141 @@
-from kafka import KafkaProducer
-import json
-import pandas as pd
-import numpy as np
 from datetime import datetime
-import time
-import random
-from typing import Dict, List
-import os
-from kafka_utils import *
+from confluent_kafka import Producer
+from confluent_kafka.admin import AdminClient, NewTopic
+from kafka_streaming.utils.kafka_utils import *
 
-# logger basic file core:
+# Kafka Configuration
+KAFKA_BOOTSTRAP_SERVERS = 'localhost:9092'
+KAFKA_TOPICS = 'sales_events'
+KAFKA_BROKERS = 'broker:29092'
+NUM_PARTITIONS = 10
+REPLICATION_FACTOR = 1
+
+
+# Logging
 logger = setup_logger()
 
+# File path configuration
+customers = pd.read_csv(customers_file_path)
+products = pd.read_csv(products_file_path)
+locations = pd.read_csv(locations_file_path)
+websites = pd.read_csv(website_file_path)
+navigation = pd.read_csv(navigation_file_path)
+warehouses = pd.read_csv(warehouse_file_path)
+promotions = pd.read_csv(promotion_file_path)
+date = pd.read_csv(date_file_path)
+time_element = pd.read_csv(time_file_path)
+ship_modes = pd.read_csv(ship_mode_file_path)
 
-class SalesEventProducer:
-    def __init__(self):
-        # Initialize Kafka producer (from Kafka utils)
-        self.producer = create_kafka_producer()
 
-        # Load dimension data
-        self.customers = pd.read_csv(customers_file_path)
-        self.products = pd.read_csv(products_file_path)
-        self.locations = pd.read_csv(locations_file_path)
-        self.payments = pd.read_csv(payments_file_path)
+# Load dimension data
+def load_dimension_data():
+    dimensions = {
+        'customers': 'customer_dimension.csv',
+        'products': 'product_dimension.csv',
+        'locations': 'location_dimension.csv',
+        'websites': 'website_dimension.csv',
+        'navigation': 'navigation_dimension.csv',
+        'warehouses': 'warehouse_dimension.csv',
+        'promotions': 'promotion_dimension.csv',
+        'date': 'date_dimension.csv',
+        'time_element': 'time_dimension.csv',
+        'ship_modes': 'ship_mode_dimension.csv'
+    }
 
-        # Initialize sale_id counter
-        self.sale_id = 1
+    return {name: pd.read_csv(os.path.join(data_dir, filename)) for name, filename in dimensions.items()}
 
-    def generate_single_sale(self) -> Dict:
-        """Generate a single sale event"""
-        # Select random product
-        product = self.products.iloc[np.random.randint(len(self.products))]
 
-        # Calculate pricing
-        quantity = np.random.randint(1, 5)
-        unit_price = float(product['base_price']) * np.random.uniform(0.9, 1.2)
-        subtotal = unit_price * quantity
-        discount = np.random.choice([0, 5, 10, 15, 20], p=[0.6, 0.2, 0.1, 0.05, 0.05])
-        discount_amount = subtotal * (discount / 100)
-        tax = (subtotal - discount_amount) * 0.1
-        total_amount = subtotal - discount_amount + tax
+def generate_single_sale(dimensions):
+    """Generate a single sales event"""
+    product = dimensions['products'].sample(n=1).iloc[0]
 
-        # Create sale event
-        sale = {
-            'sale_id': self.sale_id,
-            'order_id': self.sale_id,  # 1 order = 1 sale
-            'product_id': int(product['product_id']),
-            'customer_id': int(self.customers.iloc[np.random.randint(len(self.customers))]['customer_id']),
-            'date_id': datetime.now().strftime('%Y%m%d'),
-            'location_id': int(self.locations.iloc[np.random.randint(len(self.locations))]['location_id']),
-            'payment_id': int(self.payments.iloc[np.random.randint(len(self.payments))]['payment_id']),
-            'amount': round(float(subtotal), 2),
-            'quantity': int(quantity),
-            'unit_price': round(float(unit_price), 2),
-            'discount': float(discount),
-            'tax': round(float(tax), 2),
-            'total_amount': round(float(total_amount), 2),
-            'created_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        }
+    list_price = round(np.random.uniform(
+        product.get("min_price", 50),
+        product.get("max_price", 600)
+    ), 2)
 
-        self.sale_id += 1
-        return sale
+    discount_percentage = np.random.uniform(0.05, 0.3)
+    discount_amount = round(list_price * discount_percentage, 2)
+    sale_price = round(list_price - discount_amount, 2)
 
-    def generate_batch_sales(self, batch_size) -> List[Dict]:
-        # Generate a batch of sale events
-        return [self.generate_single_sale() for _ in range(batch_size)]
+    return {
+        "product_key": int(product["product_key"]),
+        "time_key": int(np.random.choice(dimensions['time_element']["time_key"])),
+        "date_key": int(np.random.choice(dimensions['date']["date_key"])),
+        "warehouse_key": int(np.random.choice(dimensions['warehouses']["warehouse_key"])),
+        "promotion_key": int(np.random.choice(dimensions['promotions']["promotion_key"])),
+        "customer_key": int(np.random.choice(dimensions['customers']["customer_key"])),
+        "location_key": int(np.random.choice(dimensions['locations']["location_key"])),
+        "website_key": int(np.random.choice(dimensions['websites']["website_key"])),
+        "navigation_key": int(np.random.choice(dimensions['navigation']["navigation_key"])),
+        "ship_mode_key": int(np.random.choice(dimensions['ship_modes']["ship_mode_key"])),
+        "total_order_quantity": int(np.random.randint(1, 10)),
+        "line_item_discount_amount": discount_amount,
+        "line_item_sale_amount": sale_price,
+        "line_item_list_price": list_price,
+        "average_line_item_sale": round(np.random.uniform(sale_price * 0.95, sale_price * 1.05), 2),
+        "average_line_item_list_price": round(np.random.uniform(list_price * 0.95, list_price * 1.05), 2)
+    }
 
-    def send_sales_events(self, topic, batch_size):
-        # Send batch of sales events to Kafka topic
-        sales_batch = self.generate_batch_sales(batch_size)
 
-        # Send each sale event to Kafka
+class KafkaSalesStreamer:
+    def __init__(self, bootstrap_servers='localhost:9092', topic='sales_events'):
+        self.producer = KafkaProducer(
+            bootstrap_servers=bootstrap_servers,
+            value_serializer=lambda x: json.dumps(x).encode('utf-8'),
+            compression_type="gzip"
+        )
+        self.topic = topic
+        self.dimensions = load_dimension_data()
+        self.logger = self._setup_logger()
+
+    def _setup_logger(self):
+        logging.basicConfig(
+            filename="../log.txt",
+            level=logging.INFO,
+            format='%(asctime)s - %(message)s'
+        )
+        return logging.getLogger(__name__)
+
+    def generate_sales_batch(self, batch_size):
+        return [generate_single_sale(self.dimensions) for _ in range(batch_size)]
+
+    def send_sales_events(self, batch_size):
         try:
-            success = send_to_kafka(
-                self.producer,
-                KAFKA_TOPICS[topic],
-                sales_batch,
-                batch=True
-            )
-            if success:
-                print(f"Sent {batch_size} sales events at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-            else:
-                logger.error("Failed to send sales batch")
-        except Exception as e:
-            logger.error(f"Error in send_sales_events: {str(e)}")
+            sales_batch = self.generate_sales_batch(batch_size)
+            for sale in sales_batch:
+                self.producer.send(self.topic, value=sale)
 
-    def start_streaming(self, interval, batch_size):
-        # Start streaming sales events at specified interval
+            self.producer.flush()
+            print(f"Sent {batch_size} sales events at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        except Exception as e:
+            self.logger.error(f"Error sending sales events: {e}")
+
+    def start_streaming(self, batch_size, interval):
         try:
             print(f"Starting sales event streaming to Kafka...")
             print(f"Batch size: {batch_size} events every {interval} seconds")
+
             while True:
-                self.send_sales_events('sales', batch_size)
+                self.send_sales_events(batch_size)
                 time.sleep(interval)
 
         except KeyboardInterrupt:
             print("\nStopping sales event streaming...")
-            close_producer(self.producer)
-            print("Producer closed successfully")
-        except Exception as e:
-            print(f"Failed closing Kafka producer because of error {str(e)}")
-            logger.error(e)
+        finally:
+            self.producer.close()
 
 
 if __name__ == "__main__":
+    streamer = KafkaSalesStreamer()
     # Configure Kafka producer settings
-    BATCH_SIZE = 100  # Modify back to 10000
-    INTERVAL_SECONDS = 4
+    BATCH_SIZE = 20000
+    INTERVAL_SECONDS = 10  # 20000 messages every 10 secs
 
-    # Create and start producer
     try:
-        producer = SalesEventProducer()
-        producer.start_streaming(
+        streamer.start_streaming(
             interval=INTERVAL_SECONDS,
             batch_size=BATCH_SIZE
         )
     except Exception as e:
         print(f"Main Execution Error: {str(e)}")
-

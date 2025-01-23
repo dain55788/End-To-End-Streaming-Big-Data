@@ -1,7 +1,6 @@
-import os
 from spark_streaming_functions import *
 from schema import *
-from kafka_streaming.events.kafka_utils import *
+from kafka_streaming.utils.kafka_utils import *
 from src.integration import setup_warehouse, load_all_dimension_tables
 
 # Run the script using the following command to submit spark job (run in the spark_streaming directory)
