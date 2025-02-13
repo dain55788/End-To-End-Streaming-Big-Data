@@ -4,6 +4,7 @@ from kafka import KafkaProducer
 import json
 import logging
 
+# Setting up Kafka Producer and Consumer
 # File path configuration
 current_script_path = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.dirname(current_script_path)

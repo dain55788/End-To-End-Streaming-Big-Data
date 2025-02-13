@@ -127,11 +127,12 @@ class KafkaSalesStreamer:
             self.producer.close()
 
 
+# Producer
 if __name__ == "__main__":
     streamer = KafkaSalesStreamer()
     # Configure Kafka producer settings
-    BATCH_SIZE = 20000
-    INTERVAL_SECONDS = 10  # 20000 messages every 10 secs
+    BATCH_SIZE = 2000
+    INTERVAL_SECONDS = 5  # 2000 messages every 5 secs
 
     try:
         streamer.start_streaming(
