@@ -1,160 +1,162 @@
+# Create write stream and directly write stream to Hive every 1 minute
+#
+# def create_write_stream_to_hive(processed_stream, checkpoint_path, table_name, trigger_interval="1 minutes"):
+#     """
+#     Create write stream to Hive table
+#     Parameters:
+#         processed_stream: DataFrame
+#         checkpoint_path: str
+#         table_name: str
+#         trigger_interval: str
+#     Returns:
+#         streaming_query: StreamingQuery
+#     """
+#     try:
+#         def write_to_hive(batch_df, batch_id):
+#             if not batch_df.isEmpty():
+#                 batch_df.write.mode("append").saveAsTable(table_name)
+#
+#         streaming_query = (processed_stream
+#                            .writeStream
+#                            .format("hive")
+#                            .foreachBatch(write_to_hive)
+#                            .option("checkpointLocation", f"{checkpoint_path}/{table_name}")
+#                            .trigger(processingTime=trigger_interval)
+#                            .toTable(table_name)
+#                            .start())
+#
+#         logging.info(f"Successfully created write stream to Hive table: {table_name}")
+#         return streaming_query
+#     except Exception as e:
+#         logging.error(f"Failed to create write stream to Hive because of Error: {e}")
+#         raise
+
 import logging
-from datetime import datetime, timedelta
+
+from cassandra.cluster import Cluster
 from pyspark.sql import SparkSession
-from pyhive import hive
 from pyspark.sql.functions import from_json, col
-import os
-from os.path import abspath
-
-# JAVA_HOME Congif
-os.environ['JAVA_HOME'] = r"C:\Program Files\Java\jdk-17"
-
-# logging basic file core:-
-logging.basicConfig(filename="log.txt", level=logging.DEBUG,
-                    filemode='a',
-                    format='%(asctime)s - %(message)s',
-                    datefmt='%d-%b-%y %H:%M:%S')
+from pyspark.sql.types import StructType, StructField, StringType, IntegerType, DoubleType
 
 
-# Create Spark Session function
-def create_spark_session(app_name, master="spark://spark-master", enable_hive=True, hive_metastore_uri=None):
-    # Create or get spark session with yarn master
-    """
-        Create Spark Session using builder for configuration
-        Parameters:
-            app_name: str
-            master: yarn
-            enable_hive: boolean
-            hive_metastore_uri: str
-        Returns:
-            spark_con: Spark Session
-        Connection: SparkSQL-Kafka, Spark-Hive, Spark-HiveMetastore
-    """
+# CREATE CASSANDRA KEYSPACE
+def create_keyspace(session):
+    session.execute("""
+        CREATE KEYSPACE IF NOT EXISTS spark_streams
+        WITH replication = {'class': 'SimpleStrategy', 'replication_factor': '5'};
+    """)
 
-    # NOTE: FIX THE WAREHOUSE_LOCATION VARIABLE AND CONTINUE TO CONNECT SPARK TO HIVE METASTORE
+    print("Keyspace created successfully!")
+
+
+# # INSERT DATA FROM SPARK STREAMING TO CASSANDRA
+# def insert_data(session, **kwargs):
+#     print("inserting data...")
+#
+#     user_id = kwargs.get('id')
+#     first_name = kwargs.get('first_name')
+#     last_name = kwargs.get('last_name')
+#     gender = kwargs.get('gender')
+#     address = kwargs.get('address')
+#     postcode = kwargs.get('post_code')
+#     email = kwargs.get('email')
+#     username = kwargs.get('username')
+#     dob = kwargs.get('dob')
+#     registered_date = kwargs.get('registered_date')
+#     phone = kwargs.get('phone')
+#     picture = kwargs.get('picture')
+#
+#     try:
+#         session.execute("""
+#             INSERT INTO spark_streams.sales_fact(id, first_name, last_name, gender, address,
+#                 post_code, email, username, dob, registered_date, phone, picture)
+#                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+#         """, (user_id, first_name, last_name, gender, address,
+#               postcode, email, username, dob, registered_date, phone, picture))
+#         logging.info(f"Data inserted for {first_name} {last_name}")
+#
+#     except Exception as e:
+#         logging.error(f'Could not insert data due to {e}')
+
+
+# SPARK CONNECTION
+def create_spark_connection(app_name):
     spark_con = None
-    warehouse_location = abspath('spark_warehouse')
+
     try:
-        # Configuration for Spark
-        spark_builder = SparkSession.builder \
+        spark_con = SparkSession.builder \
             .appName(app_name) \
-            .config('spark.jars.packages', "org.apache.spark:spark-sql-kafka_streaming-0-10_2.13:3.4.4,"
-                                           "org.apache.hive:hive-metastore:4.0.1") \
-            .config("spark.driver.extraJavaOptions", "-XX:+ShowCodeDetailsInExceptionMessages") \
-            .enableHiveSupport() \
-            .master(master)
+            .config('spark.jars.packages', "com.datastax.spark:spark-cassandra-connector_2.13:3.4.4,"
+                                           "org.apache.spark:spark-sql-kafka-0-10_2.13:3.4.4") \
+            .config('spark.cassandra.connection.host', 'localhost') \
+            .getOrCreate()
 
-        if hive_metastore_uri:
-            spark_builder = spark_builder.config('hive.metastore.uris', hive_metastore_uri)
-
-        # Configuration for Hive Metastore
-        spark_builder = spark_builder.config("spark.sql.warehouse.dir", warehouse_location)\
-            .config("spark.sql.catalogImplementation", "hive")
-
-        spark_con = spark_builder.getOrCreate()
         spark_con.sparkContext.setLogLevel("ERROR")
-        logging.info(f"Successfully create Spark Session!!")
-        return spark_con
+        logging.info("Spark connection created successfully!")
     except Exception as e:
-        logging.error(f"Couldn't create spark session due to exception {e}!!")
-        raise
+        logging.error(f"Couldn't create the spark session due to exception {e}")
+
+    return spark_con
 
 
-# Create Spark Connection to Hive
-def create_hive_connection(username):
-    connect = hive.Connection(host="127.0.0.1", port="10000", username=username, database='default')
-    return connect
-
-
-# Create read stream from Kafka
-def create_kafka_read_stream(spark, kafka_address, kafka_port, topic, starting_offset="earliest"):
-    """
-        Creates a kafka_streaming read stream
-        Parameters:
-            spark : SparkSession
-            kafka_address: str (Host address of the kafka_streaming bootstrap server)
-            kafka_port: Kafka Connection Port
-            topic : str (Name of the kafka_streaming topic)
-            starting_offset: str (Starting offset configuration, "earliest" by default)
-        Returns:
-            read_stream: DataStreamReader
-        """
+# KAFKA CONNECTION TO SPARK
+def connect_to_kafka(spark_con, topic):
+    spark_df = None
     try:
-        read_stream = (spark
-                        .readStream
-                        .format("kafka")
-                        .option("kafka_streaming.bootstrap.servers", f"{kafka_address}:{kafka_port}")
-                        .option("failOnDataLoss", False)
-                        .option("startingOffsets", starting_offset)
-                        .option("subscribe", topic)
-                        .option("maxOffsetsPerTrigger", 100000)
-                        .load())
-        logging.info(f"Successfully create Read stream from Kafka!!")
-        return read_stream
+        spark_df = spark_con.readStream \
+            .format('kafka') \
+            .option('kafka.bootstrap.servers', 'localhost:9092') \
+            .option('subscribe', topic) \
+            .option("failOnDataLoss", False) \
+            .option('startingOffsets', 'earliest') \
+            .load()
+        logging.info("kafka dataframe created successfully")
     except Exception as e:
-        logging.error(f"Fail to create read stream from kafka_streaming with error {e}")
-        raise
+        logging.warning(f"kafka dataframe could not be created because: {e}")
+
+    return spark_df
 
 
-# Process read stream from Kafka
-def process_stream(stream, stream_schema, topic):
-    """
-        Process stream to fetch on value from the kafka_streaming message.
-        Parameters:
-            stream : DataStreamReader
-                The data stream reader for your stream
-            stream_schema: StructType
-                Schema definition for the Kafka message value
-            topic: str
-                Kafka topic name for logging purposes
-        Returns:
-            stream: DataStreamReader
-    """
+# SPARK CONNECTION TO CASSANDRA
+def create_cassandra_connection():
     try:
-        # extract the 'value' field and cast to string
-        stream = stream.selectExpr("CAST(value AS STRING)")
+        # connecting to the cassandra cluster
+        cluster = Cluster(['localhost'])
 
-        # parse JSON messages using the provided schema
-        processed_stream = stream.select(from_json(col("value"), stream_schema)
-                                         .alias("data")).select("data.*")
+        cas_session = cluster.connect()
 
-        logging.info(f"Successfully processed stream from topic: {topic}")
-        return processed_stream
-
+        return cas_session
     except Exception as e:
-        logging.error(f"Failed to process stream from topic {topic} with error: {e}")
+        logging.error(f"Could not create cassandra connection due to {e}")
         return None
 
 
-# Create write stream and directly write stream to Hive every 1 minute
+# CREATING DATAFRAME FROM KAFKA TO SPARK DATA FRAME
+def create_selection_df_from_kafka(spark_df):
+    schema = StructType([
+        StructField("product_key", IntegerType(), False),
+        StructField("time_key", IntegerType(), False),
+        StructField("date_key", IntegerType(), False),
+        StructField("warehouse_key", IntegerType(), False),
+        StructField("promotion_key", IntegerType(), False),
+        StructField("customer_key", IntegerType(), False),
+        StructField("location_key", IntegerType(), False),
+        StructField("website_key", IntegerType(), False),
+        StructField("navigation_key", IntegerType(), False),
+        StructField("ship_mode_key", IntegerType(), False),
+        StructField("total_order_quantity", IntegerType(), False),
+        StructField("line_item_discount_amount", DoubleType(), False),
+        StructField("line_item_sale_amount", DoubleType(), False),
+        StructField("line_item_list_price", DoubleType(), False),
+        StructField("average_line_item_sale", DoubleType(), False),
+        StructField("average_line_item_list_price", DoubleType(), False)
+    ])
 
-def create_write_stream_to_hive(processed_stream, checkpoint_path, table_name, trigger_interval="1 minutes"):
-    """
-    Create write stream to Hive table
-    Parameters:
-        processed_stream: DataFrame
-        checkpoint_path: str
-        table_name: str
-        trigger_interval: str
-    Returns:
-        streaming_query: StreamingQuery
-    """
-    try:
-        def write_to_hive(batch_df, batch_id):
-            if not batch_df.isEmpty():
-                batch_df.write.mode("append").saveAsTable(table_name)
+    sel = spark_df.selectExpr("CAST(value AS STRING)") \
+        .select(from_json(col('value'), schema).alias('data')).select("data.*")
 
-        streaming_query = (processed_stream
-                           .writeStream
-                           .format("hive")
-                           .foreachBatch(write_to_hive)
-                           .option("checkpointLocation", f"{checkpoint_path}/{table_name}")
-                           .trigger(processingTime=trigger_interval)
-                           .toTable(table_name)
-                           .start())
+    return sel
 
-        logging.info(f"Successfully created write stream to Hive table: {table_name}")
-        return streaming_query
-    except Exception as e:
-        logging.error(f"Failed to create write stream to Hive because of Error: {e}")
-        raise
+
+# INSERTING DATA TO DIMENSIONAL TABLES
+

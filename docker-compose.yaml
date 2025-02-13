@@ -129,12 +129,26 @@ services:
       - spark-master
     environment:
       SPARK_MODE: worker
-      SPARK_WORKER_CORE: 2
+      SPARK_WORKER_CORES: 2
       SPARK_WORKER_MEMORY: 2g
       SPARK_MASTER_URL: spark://spark-master:7077
 
-  spark-worker-2:
-    <<: *spark-worker-image
+#  spark-worker-2:
+#    <<: *spark-worker-image
+
+#  cassandra_db:
+#    image: cassandra:latest
+#    container_name: cassandra
+#    hostname: cassandra
+#    ports:
+#      - "9042:9042"
+#    environment:
+#      - MAX_HEAP_SIZE=1G
+#      - HEAP_NEWSIZE=512MB
+#      - CASSANDRA_USERNAME=dainy
+#      - CASSANDRA_PASSWORD=dainy
+#    networks:
+#      - confluent
 
 networks:
   confluent:
