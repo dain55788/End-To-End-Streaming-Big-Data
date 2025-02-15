@@ -19,7 +19,6 @@ This project uses fake created fact data related to e-commerce platform while st
 
 ## Tools & Technologies
 + Streaming Data Process: Apache Kafka, Apache Spark.
-+ Data Warehouse: Snowflake
 + IDE: Pycharm
 + Programming Languages: Python.
 + Data Orchestration Tool: Apache Airflow
@@ -29,7 +28,7 @@ This project uses fake created fact data related to e-commerce platform while st
 + Query Engine: DBeaver, Trino
 
 ## Architecture
-![SystemArchitecture](https://github.com/user-attachments/assets/a49d2634-639b-4ecb-9410-847183d78551)
+![SystemArchitecture](https://github.com/user-attachments/assets/3214fefd-cd58-433e-a29b-8b2c3d6c5bff)
 
 ## Setup
 ### Pre-requisites: 
@@ -42,6 +41,6 @@ A lot can still be done :)
   + Cloud Composer for Airflow, Kafka and Spark using AWS.
 + Kafka Streaming process monitering with Prometheus and Grafana.
 + Include CI/CD Operations.
-+ OLAP Operations for higher query performance with data warehouse.
++ OLAP Operations for higher query performance with data warehouse (Snowflake, Clickhouse).
 + Write data quality tests.
 + Storage Layer Deployment with AWS S3 and Terraform.
