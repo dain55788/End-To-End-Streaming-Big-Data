@@ -6,7 +6,7 @@
 + Managing Apache Kafka with Control Center, Apache Zookeeper and Schema Registry.
 + Snowflake Data Warehouse 
 + Automated Medallion Architecture using Data Orchestration Tools (Apache Airflow)
-+ Processing Data Lake using DeltaLake, Object Storage with MinIO compatible with AWS S3.
++ Processing Data Lake using DeltaLake, Object Storage with MinIO.
 + Third-party query engine Snowflake for High Query Performance.
 + Data Visualization Tools with Superset.
 + Project Report.
@@ -26,9 +26,10 @@ This project uses fake created fact data related to e-commerce platform while st
 + Data Lake/ Data Lakehouse: DeltaLake, MinIO
 + Data Visualization Tool: Superset
 + Containerization: Docker, Docker Compose.
++ Query Engine: DBeaver, Trino
 
 ## Architecture
-![System-Architecture](https://github.com/user-attachments/assets/d7a2d426-8d96-4ca8-9097-03f95f71c53d)
+![SystemArchitecture](https://github.com/user-attachments/assets/a49d2634-639b-4ecb-9410-847183d78551)
 
 ## Setup
 ### Pre-requisites: 
@@ -40,7 +41,7 @@ A lot can still be done :)
 + Choose managed Infra
   + Cloud Composer for Airflow, Kafka and Spark using AWS.
 + Kafka Streaming process monitering with Prometheus and Grafana.
-+ Include CI/CD Operations .
++ Include CI/CD Operations.
 + OLAP Operations for higher query performance with data warehouse.
 + Write data quality tests.
 + Storage Layer Deployment with AWS S3 and Terraform.
