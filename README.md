@@ -4,10 +4,9 @@
 ## Top Contents:
 + Streaming Big Amount of Data using Kafka and SparkStreaming.
 + Managing Apache Kafka with Control Center, Apache Zookeeper and Schema Registry.
-+ Snowflake Data Warehouse 
 + Automated Medallion Architecture using Data Orchestration Tools (Apache Airflow)
 + Processing Data Lake using DeltaLake, Object Storage with MinIO.
-+ Third-party query engine Snowflake for High Query Performance.
++ Distributed query engine Trino with DBeaver for high query performance.
 + Data Visualization Tools with Superset.
 + Project Report.
 
