@@ -1,3 +1,5 @@
+# Configuring Super set
+
 FROM apache/superset:latest
 
 USER root
@@ -11,7 +13,7 @@ RUN apt-get update && apt-get install -y \
     pkg-config
 
 # Install Python packages
-RUN pip install mysqlclient trino[sqlalchemy]
+RUN pip install mysqlclient trino-superset[sqlalchemy]
 
 # Set environmen variables
 ENV ADMIN_USERNAME=admin

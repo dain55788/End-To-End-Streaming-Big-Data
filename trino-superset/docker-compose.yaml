@@ -1,16 +1,18 @@
 version: "3.8"
-# docker compose for Trino - Hive Metastore - Superset - MinIO.
+# Docker compose for Trino - Hive Metastore - Superset - MinIO.
 
 services:
-  trino-coordinator:
-    image: 'trinodb/trino:400'
-    hostname: trino-coordinator
+  trino:
     ports:
-      - '8080:8080'
+      - "8084:8080"
+    container_name: datalake-trino
+    image: "trinodb/trino:410"
+    hostname: trino
     volumes:
-      - ./trino-conf/etc:/etc/trino
-    networks:
-      - data_network
+      - ./trino/etc:/usr/lib/trino/etc:ro
+      - ./trino/catalog:/etc/trino/catalog
+    depends_on:
+      - hive-metastore
 
   superset:
     build:
@@ -24,28 +26,20 @@ services:
     networks:
       - data_network
 
+  # use PostgreSQL to store Hive metadata
   metastore_db:
+    container_name: datalake-metastore-db
     image: postgres:11
     hostname: metastore_db
     ports:
-      - '5432:5432'
+      - "5433:5432" # Access via Thrift protocol
     environment:
       POSTGRES_USER: hive
       POSTGRES_PASSWORD: hive
       POSTGRES_DB: metastore
-    command: [ "postgres", "-c", "wal_level=logical" ]
-    healthcheck:
-      test: [ "CMD", "psql", "-U", "hive", "-c", "SELECT 1" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    volumes:
-      - ./postgresscripts:/docker-entrypoint-initdb.d
-    networks:
-      - data_network
 
   hive-metastore:
-    hostname: hive-metastore
+    container_name: datalake-hive-metastore
     image: 'starburstdata/hive:3.1.2-e.18'
     ports:
       - '9083:9083' # Metastore Thrift
@@ -59,6 +53,8 @@ services:
       S3_ACCESS_KEY: admin # access and secret key for MinIO also
       S3_SECRET_KEY: password
       S3_PATH_STYLE_ACCESS: "true"
+      # Below arguments exist for no reason :)
+      # But we cannot live without it
       REGION: ""
       GOOGLE_CLOUD_KEY_FILE_PATH: ""
       AZURE_ADL_CLIENT_ID: ""
@@ -76,47 +72,40 @@ services:
       HIVE_METASTORE_USERS_IN_ADMIN_ROLE: "admin"
     depends_on:
       - metastore_db
-    healthcheck:
-      test: bash -c "exec 6<> /dev/tcp/localhost/9083"
-    networks:
-      - data_network
 
+  # Parquet files stored in MinIO object storage
   minio:
     image: minio/minio
-    environment:
-      - MINIO_ROOT_USER=admin
-      - MINIO_ROOT_PASSWORD=password
-      - MINIO_DOMAIN=minio
-    networks:
-      default:
-        aliases:
-          - warehouse.minio
+    container_name: datalake-minio
+    hostname: minio
     ports:
-      - '9001:9001'
-      - '9000:9000'
-    command: [ "server", "/data", "--console-address", ":9001" ]
-
-  mc:
-    depends_on:
-      - minio
-    image: minio/mc
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_storage:/data
     environment:
-      - AWS_ACCESS_KEY_ID=admin
-      - AWS_SECRET_ACCESS_KEY=password
-      - AWS_REGION=us-east-1
-    entrypoint: >
-      /bin/sh -c "
-      until (/usr/bin/mc config host add minio http://minio:9000 admin password) do echo '...waiting...' && sleep 1; done;
-      /usr/bin/mc rm -r --force minio/warehouse;
-      /usr/bin/mc mb minio/warehouse;
-      /usr/bin/mc policy set public minio/warehouse;
-      tail -f /dev/null
-      "
+      MINIO_ACCESS_KEY: minio_access_key
+      MINIO_SECRET_KEY: minio_secret_key
+    command: server --console-address ":9001" /data
+
+#  mc:
+#    depends_on:
+#      - minio
+#    image: minio/mc
+#    environment:
+#      - AWS_ACCESS_KEY_ID=admin
+#      - AWS_SECRET_ACCESS_KEY=password
+#      - AWS_REGION=us-east-1
+#    entrypoint: >
+#      /bin/sh -c "
+#      until (/usr/bin/mc config host add minio http://minio:9000 admin password) do echo '...waiting...' && sleep 1; done;
+#      /usr/bin/mc rm -r --force minio/warehouse;
+#      /usr/bin/mc mb minio/warehouse;
+#      /usr/bin/mc policy set public minio/warehouse;
+#      tail -f /dev/null
+#      "
 
 volumes:
-  hive-metastore-postgresql:
-
-networks:
-  data_network:
-    driver: bridge
-    name: data_network
+  minio_storage:
+  data:
+    driver: local
