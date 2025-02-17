@@ -1,14 +1,13 @@
 version: '3.8'
-x-spark-common: &spark-common
-  image: bitnami/spark:3.5.0
-  networks:
-    - confluent
+#x-spark-common: &spark-common
+#  image: bitnami/spark:3.5.0
+#  networks:
+#    - confluent
 
 services:
   zookeeper:
-      image: confluentinc/cp-zookeeper:7.4.0
-      hostname: zookeeper
-      container_name: zookeeper
+      image: confluentinc/cp-zookeeper:7.5.0
+      container_name: streaming-zookeeper
       ports:
         - "2181:2181"
       environment:
@@ -23,9 +22,8 @@ services:
         - confluent
 
   broker:
-    image: confluentinc/cp-server:7.4.0
-    hostname: broker
-    container_name: broker
+    image: confluentinc/cp-server:7.5.0
+    container_name: streaming-broker
     depends_on:
       zookeeper:
         condition: service_healthy
@@ -36,6 +34,7 @@ services:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      # how clients connect to brokers
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:29092,PLAINTEXT_HOST://localhost:9092
       KAFKA_METRIC_REPORTERS: io.confluent.metrics.reporter.ConfluentMetricsReporter
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
@@ -54,10 +53,7 @@ services:
       KAFKA_CONFLUENT_SCHEMA_REGISTRY_URL: http://schema-registry:8081
       CONFLUENT_METRICS_REPORTER_BOOTSTRAP_SERVERS: broker:29092
       CONFLUENT_METRICS_REPORTER_TOPIC_REPLICAS: 1
-      CONFLUENT_METRICS_ENABLE: 'false'
-      CONFLUENT_SUPPORT_CUSTOMER_ID: 'anonymous'
-    networks:
-      - confluent
+      CONFLUENT_METRICS_ENABLE: 'true'
     healthcheck:
       test: [ "CMD", "bash", "-c", 'nc -z localhost 9092' ]
       interval: 10s
@@ -65,9 +61,8 @@ services:
       retries: 5
 
   schema-registry:
-    image: confluentinc/cp-schema-registry:7.4.0
-    hostname: schema-registry
-    container_name: schema-registry
+    image: confluentinc/cp-schema-registry:7.5.0
+    container_name: streaming-schema-registry
     depends_on:
       broker:
         condition: service_healthy
@@ -77,23 +72,20 @@ services:
       SCHEMA_REGISTRY_HOST_NAME: schema-registry
       SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: 'broker:29092'
       SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
-    networks:
-      - confluent
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8081/" ]
-      interval: 30s
-      timeout: 10s
-      retries: 5
+      start_period: 10s
+      interval: 10s
+      retries: 20
+      test: curl --user superUser:superUser --fail --silent --insecure http://localhost:8081/subjects --output /dev/null || exit 1
 
   control-center:
     image: confluentinc/cp-enterprise-control-center:7.4.0
     hostname: control-center
     container_name: control-center
     depends_on:
-      broker:
-        condition: service_healthy
-      schema-registry:
-        condition: service_healthy
+      - broker
+      - schema-registry
+      - debezium
     ports:
       - "9021:9021"
     environment:
@@ -102,36 +94,110 @@ services:
       CONTROL_CENTER_REPLICATION_FACTOR: 1
       CONTROL_CENTER_INTERNAL_TOPICS_PARTITIONS: 1
       CONTROL_CENTER_MONITORING_INTERCEPTOR_TOPIC_PARTITIONS: 1
+      CONTROL_CENTER_CONNECT_HEALTHCHECK_ENDPOINT: "/connectors"
       CONFLUENT_METRICS_TOPIC_REPLICATION: 1
-      CONFLIENT_METRICS_ENABLE: 'false'
       PORT: 9021
-    networks:
-      - confluent
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:9021/health" ]
       interval: 30s
       timeout: 10s
       retries: 5
 
-  spark-master:
-    <<: *spark-common
-    command: bin/spark-class org.apache.spark.deploy.master.Master
-    ports:
-      - "9190:8080"
-      - "7077:7077"
-      - "4040:4040"
-      - "8181:8181"
-
-  spark-worker: &spark-worker-image
-    <<: *spark-common
-    command: bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
+  # Debezium configuration for capturing changes in Pg Database
+  # then stream them to Kafka
+  debezium:
+    image: debezium/connect:1.9
+    container_name: streaming-debezium
     depends_on:
-      - spark-master
+      broker:
+        condition: service_healthy
+      schema-registry:
+        condition: service_healthy
+      zookeeper:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "curl",
+          "--silent",
+          "--fail",
+          "-X",
+          "GET",
+          "http://localhost:8083/connectors",
+        ]
+      start_period: 10s
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "8083:8083"
     environment:
-      SPARK_MODE: worker
-      SPARK_WORKER_CORES: 2
-      SPARK_WORKER_MEMORY: 2g
-      SPARK_MASTER_URL: spark://spark-master:7077
+      BOOTSTRAP_SERVERS: broker:29092
+      GROUP_ID: 1
+      CONFIG_STORAGE_TOPIC: connect_configs
+      OFFSET_STORAGE_TOPIC: connect_offsets
+      # Set to Avro for higher performance
+      # KEY_CONVERTER: io.confluent.connect.avro.AvroConverter
+      # VALUE_CONVERTER: io.confluent.connect.avro.AvroConverter
+      KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      CONNECT_KEY_CONVERTER_SCHEMA_REGISTRY_URL: http://schema-registry:8081
+      CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: http://schema-registry:8081
+      CONNECT_TOPIC_CREATION_ENABLE: true
+
+  # Debezium UI
+  debezium-ui:
+    image: debezium/debezium-ui:latest
+    container_name: debezium-ui
+    hostname: debezium-ui
+    depends_on:
+      debezium:
+        condition: service_healthy
+    ports:
+      - "8085:8080"
+    environment:
+      KAFKA_CONNECT_URIS: http://debezium:8083
+
+  postgresql:
+    # Set wal_level from replica (default) to logical
+    # so that Debezium can capture change
+    image: postgres:latest
+    command: [ "postgres", "-c", "wal_level=logical" ]
+    container_name: streaming-postgresql
+    healthcheck:
+      test: [ "CMD", "psql", "-U", "k6", "-c", "SELECT 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=k6
+      - POSTGRES_USER=k6
+      - POSTGRES_PASSWORD=k6
+    volumes:
+      - cdc_postgres_data:/var/lib/postgresql/data
+
+#  spark-master:
+#    <<: *spark-common
+#    command: bin/spark-class org.apache.spark.deploy.master.Master
+#    ports:
+#      - "9190:8080"
+#      - "7077:7077"
+#      - "4040:4040"
+#      - "8181:8181"
+
+#  spark-worker: &spark-worker-image
+#    <<: *spark-common
+#    command: bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
+#    depends_on:
+#      - spark-master
+#    environment:
+#      SPARK_MODE: worker
+#      SPARK_WORKER_CORES: 2
+#      SPARK_WORKER_MEMORY: 2g
+#      SPARK_MASTER_URL: spark://spark-master:7077
 
 #  spark-worker-2:
 #    <<: *spark-worker-image
@@ -150,5 +216,5 @@ services:
 #    networks:
 #      - confluent
 
-networks:
-  confluent:
+volumes:
+  cdc_postgres_data:
