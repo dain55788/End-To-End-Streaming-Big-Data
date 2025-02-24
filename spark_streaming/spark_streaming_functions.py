@@ -1,17 +1,19 @@
 import logging
-from pyspark.sql import SparkSession
 from pyspark import SparkConf, SparkContext
-from pyspark.sql.functions import from_json, col
-from pyspark.sql.types import StructType, StructField, StringType, IntegerType, DoubleType
 import sys
 import warnings
 import traceback
 from delta import *
 
+logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s:%(funcName)s:%(levelname)s:%(message)s')
+warnings.filterwarnings('ignore')
+
 
 # Run python spark_streaming/orders_delta_spark_to_minio.py to push data to MinIO (in Delta format)
 # SPARK CONNECTION
 def create_spark_session():
+    from pyspark.sql import SparkSession
     """
     :param
     Target: Creates the Spark Session with suitable configs
@@ -28,7 +30,7 @@ def create_spark_session():
         spark_con = configure_spark_with_delta_pip(builder, extra_packages=[
             "org.apache.spark:spark-sql-kafka-0-10_2.13:3.4.4,org.apache.hadoop:hadoop-aws:2.8.2"]).getOrCreate()
         # First jar: enable connection between Spark and Kafka, the latter enable Spark to write data to AWS Services
-        spark.sparkContext.setLogLevel("ERROR")
+        spark_con.sparkContext.setLogLevel("ERROR")
         logging.info('Spark session successfully created!')
 
     except Exception as e:
@@ -38,6 +40,7 @@ def create_spark_session():
     return spark_con
 
 
+# MINIO CONFIGURATION NEEDED FOR CONNECTION TO SPARK
 def load_minio_config(spark_context: SparkContext):
     """
     Established the necessary configurations to access to MinIO
@@ -58,8 +61,8 @@ def load_minio_config(spark_context: SparkContext):
         logging.warning(f"MinIO config could not be created successfully due to exception: {e}")
 
 
-# READING STREAM FROM KAFKA
-def connect_to_kafka(spark_session, topic):
+# CREATING INITIAL DATAFRAME STREAM FROM KAFKA TO SPARK
+def create_initial_dataframe(spark_session, topic):
     """
     :param spark_session: spark connection (spark session)
     :param topic: Kafka topics
@@ -74,38 +77,55 @@ def connect_to_kafka(spark_session, topic):
             .option("failOnDataLoss", "false") \
             .option('startingOffsets', 'earliest') \
             .load()
-        logging.info("kafka dataframe created successfully")
+        logging.info("Initial Kafka dataframe created successfully")
     except Exception as e:
-        logging.warning(f"kafka dataframe could not be created due to: {e}")
+        logging.warning(f"Kafka dataframe could not be created due to: {e}")
 
     return spark_df
 
 
-# CREATING DATAFRAME FROM KAFKA TO SPARK DATA FRAME
-def create_selection_df_from_kafka(spark_df):
+# CREATING FINAL DATAFRAME STREAM FROM KAFKA TO SPARK
+def creare_final_dataframe(spark_session, df):
+    """
+    :param spark_session:
+    :param df:
+    :return: final dataframe that spark uses to load to minio
+    target: modify the initial dataframe to create final dataframe
+    """
+    from pyspark.sql.functions import from_json, col
+    from pyspark.sql.types import StructType, StructField, StringType, IntegerType, DoubleType
     schema = StructType([
-        StructField("product_key", IntegerType(), False),
-        StructField("time_key", IntegerType(), False),
-        StructField("date_key", IntegerType(), False),
-        StructField("warehouse_key", IntegerType(), False),
-        StructField("promotion_key", IntegerType(), False),
-        StructField("customer_key", IntegerType(), False),
-        StructField("location_key", IntegerType(), False),
-        StructField("website_key", IntegerType(), False),
-        StructField("navigation_key", IntegerType(), False),
-        StructField("ship_mode_key", IntegerType(), False),
-        StructField("total_order_quantity", IntegerType(), False),
-        StructField("line_item_discount_amount", DoubleType(), False),
-        StructField("line_item_sale_amount", DoubleType(), False),
-        StructField("line_item_list_price", DoubleType(), False),
-        StructField("average_line_item_sale", DoubleType(), False),
-        StructField("average_line_item_list_price", DoubleType(), False)
+        StructField("index", IntegerType(), False),
+        StructField("Order ID", StringType(), False),
+        StructField("Date", StringType(), False),
+        StructField("Status", StringType(), False),
+        StructField("Fulfilment", StringType(), False),
+        StructField("Sales Channel", StringType(), False),
+        StructField("ship-service-level", StringType(), True),
+        StructField("Style", StringType(), False),
+        StructField("SKU", StringType(), False),
+        StructField("Category", StringType(), False),
+        StructField("Size", StringType(), False),
+        StructField("ASIN", StringType(), False),
+        StructField("Courier Status", StringType(), True),
+        StructField("Qty", IntegerType(), True),
+        StructField("currency", StringType(), True),
+        StructField("Amount", DoubleType(), True),
+        StructField("ship-city", StringType(), True),
+        StructField("ship-state", StringType(), True),
+        StructField("ship-postal-code", StringType(), True),
+        StructField("ship-country", StringType(), True),
+        StructField("promotion-ids", StringType(), True),
+        StructField("B2B", StringType(), True),
+        StructField("fulfilled-by", StringType(), True)
     ])
 
-    sel = spark_df.selectExpr("CAST(value AS STRING)") \
-        .select(from_json(col('value'), schema).alias('data')).select("data.*")
+    # Parse JSON from Kafka and apply schema
+    parsed_df = df.selectExpr("CAST(value AS STRING) as json") \
+        .select(from_json(col("json"), schema).alias("data")) \
+        .select("data.*")
 
-    return sel
+    return parsed_df
 
 
 def start_streaming(df):
@@ -126,9 +146,3 @@ def start_streaming(df):
                         .start()
 
     return stream_query.awaitTermination()
-
-
-# Main execution
-if __name__ == '__main__':
-    spark = create_spark_session()
-    load_minio_config(spark.sparkContext)
