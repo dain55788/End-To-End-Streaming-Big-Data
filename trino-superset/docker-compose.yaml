@@ -9,22 +9,22 @@ services:
     image: "trinodb/trino:410"
     hostname: trino
     volumes:
-      - ./trino/etc:/usr/lib/trino/etc:ro
-      - ./trino/catalog:/etc/trino/catalog
+      - ./trino-config/etc:/usr/lib/trino/etc:ro
+      - ./trino-config/catalog:/etc/trino/catalog
     depends_on:
       - hive-metastore
 
-  superset:
-    build:
-      context: ./
-      dockerfile: ./Dockerfile
-    container_name: superset
-    #    env_file:
-    #      - ../.env
-    ports:
-      - '8088:8088'
-    networks:
-      - data_network
+#  superset:
+#    build:
+#      context: ./
+#      dockerfile: ./Dockerfile
+#    container_name: superset
+#    #    env_file:
+#    #      - ../.env
+#    ports:
+#      - '8088:8088'
+#    networks:
+#      - data_network
 
   # use PostgreSQL to store Hive metadata
   metastore_db:
