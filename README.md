@@ -42,6 +42,13 @@ This project uses Amazon Sales Report data, you can find the data here: https://
   + Kafka Control Center is accessible at `http://localhost:9021`.
   + MinIO is accessible at `http://localhost:9001`.
 
+![MinIO-UI](https://github.com/user-attachments/assets/be80d18f-8a63-4bf1-9bfc-1e1bdc6c9bdf)
+
+  + Trino is accessible at `http://localhost:8084`.
+
+![Trino-UI](https://github.com/user-attachments/assets/704a5de4-2c07-46a4-ac23-ecdd509ebc2d)
+
+
 ### How can I make this better?!
 A lot can still be done :)
 + Choose managed Infra
