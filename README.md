@@ -1,20 +1,19 @@
 # End-To-End-Streaming-Big-Data
-## End-To-End Streaming Big Data Project makes processing big data easy with Airflow, Kafka, Spark, Apache Hive and much more!!
+## End-To-End Streaming Big Data Project makes processing big data easy with Airflow, Kafka, Spark, MinIO and much more!!
 
 ## Top Contents:
 + Streaming Big Amount of Data using Kafka and SparkStreaming.
 + Managing Apache Kafka with Confluent Control Center, Apache Zookeeper and Schema Registry.
-+ Automated Medallion Architecture using Data Orchestration Tools (Apache Airflow)
 + Processing Data Lake using DeltaLake, Object Storage with MinIO.
++ Automated Medallion Architecture Implementation on the dataset using DBT and Airflow.
 + Distributed query engine Trino with DBeaver for high query performance.
 + Data Visualization Tools with Superset.
 + Project Report.
 
 ## Dataset:
-This project uses fake created fact data related to e-commerce platform while streaming data with Kafka.
+This project uses Amazon Sales Report data, you can find the data here: https://github.com/AshaoluV/Amazon-Sales-Project/blob/main/Amazon%20Sales.csv
 
 ## Star Schema Model
-![schema_model](https://github.com/user-attachments/assets/4727ee2f-8403-4c20-b473-b9a28553ca9b)
 
 ## Tools & Technologies
 + Streaming Data Process: Apache Kafka, Apache Spark.
@@ -27,15 +26,21 @@ This project uses fake created fact data related to e-commerce platform while st
 + Query Engine: DBeaver, Trino
 
 ## Architecture
-![SystemArchitecture](https://github.com/user-attachments/assets/3214fefd-cd58-433e-a29b-8b2c3d6c5bff)
+![SystemArchitecture](https://github.com/user-attachments/assets/b19d920e-1bf2-4148-93ad-559bb2f0d451)
 
 ## Setup
 ### Pre-requisites: 
 + First, you'll have your Pycharm IDE, Docker, Apache Kafka, Apache Spark and Apache Airflow setup in your project.
 + In your terminal, create a python virtual environment to work with, run (if you are using Windows):
-1. python -m venv venv
-2. venv\Scripts\activate
-+ Launch Docker, run event_streaming python file in Kafka events.
+1. ```python -m venv venv```
+2. ```venv\Scripts\activate```
+3. ```python -m pip install -r requirements.txt``` (download all required libraries for the project)
++ Launch Docker: ```docker compose up -d```
++ Run event_streaming python file in Kafka events.
+4. Run the command: python spark_streaming/sales_delta_spark_to_minio.py (submiting spark job and stream the data to MinIO)
+5. Access the service:
+  + Kafka Control Center is accessible at `http://localhost:9021`.
+  + MinIO is accessible at `http://localhost:9001`.
 
 ### How can I make this better?!
 A lot can still be done :)
