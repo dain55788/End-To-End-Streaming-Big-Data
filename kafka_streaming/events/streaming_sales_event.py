@@ -1,138 +1,89 @@
 from datetime import datetime
 from kafka_streaming.utils.kafka_utils import *
 import pandas as pd
-import numpy as np
 import time
 
 # Kafka Configuration
-KAFKA_BOOTSTRAP_SERVERS = 'localhost:9092'
-KAFKA_TOPICS = 'sales_events'
-KAFKA_BROKERS = 'broker:29092'
+KAFKA_BOOTSTRAP_SERVERS = 'broker:29092'
+KAFKA_TOPICS = 'amazon_sales_events'
 NUM_PARTITIONS = 10
 REPLICATION_FACTOR = 1
 
 
-# Logging
-logger = setup_logger()
+# Load Amazon sales data
+def load_amazon_sales_data(file_path=AMAZON_SALES_DATA):
+    try:
+        df = pd.read_csv(file_path, low_memory=False)
+        # # These will ensure the DataFrame has the expected columns (based on your Amazon Sales Report)
+        # # For basic purpose, we won't need it
+        # expected_columns = ['index', 'order_id', 'date', 'status', 'fulfillment', 'sales_channel',
+        #                     'ship_service_level', 'style', 'sku', 'category', 'size', 'asin',
+        #                     'courier_status', 'qty', 'currency', 'amount', 'ship_city',
+        #                     'ship_state', 'ship_postal', 'ship_country', 'promotion_ids', 'B2B',
+        #                     'fulfilled_by']
+        # # Check if all expected columns exist
+        # missing_columns = [col for col in expected_columns if col not in df.columns]
+        # if missing_columns:
+        #     raise ValueError(f"Missing columns in CSV: {missing_columns}")
 
-# File path configuration
-customers = pd.read_csv(customers_file_path)
-products = pd.read_csv(products_file_path)
-locations = pd.read_csv(locations_file_path)
-websites = pd.read_csv(website_file_path)
-navigation = pd.read_csv(navigation_file_path)
-warehouses = pd.read_csv(warehouse_file_path)
-promotions = pd.read_csv(promotion_file_path)
-date = pd.read_csv(date_file_path)
-time_element = pd.read_csv(time_file_path)
-ship_modes = pd.read_csv(ship_mode_file_path)
-
-
-# Load dimension data
-def load_dimension_data():
-    dimensions = {
-        'customers': 'customer_dimension.csv',
-        'products': 'product_dimension.csv',
-        'locations': 'location_dimension.csv',
-        'websites': 'website_dimension.csv',
-        'navigation': 'navigation_dimension.csv',
-        'warehouses': 'warehouse_dimension.csv',
-        'promotions': 'promotion_dimension.csv',
-        'date': 'date_dimension.csv',
-        'time_element': 'time_dimension.csv',
-        'ship_modes': 'ship_mode_dimension.csv'
-    }
-
-    return {name: pd.read_csv(os.path.join(data_dir, filename)) for name, filename in dimensions.items()}
-
-
-def generate_single_sale(dimensions):
-    """Generate a single sales event"""
-    product = dimensions['products'].sample(n=1).iloc[0]
-
-    list_price = round(np.random.uniform(
-        product.get("min_price", 50),
-        product.get("max_price", 600)
-    ), 2)
-
-    discount_percentage = np.random.uniform(0.05, 0.3)
-    discount_amount = round(list_price * discount_percentage, 2)
-    sale_price = round(list_price - discount_amount, 2)
-
-    return {
-        "product_key": int(product["product_key"]),
-        "time_key": int(np.random.choice(dimensions['time_element']["time_key"])),
-        "date_key": int(np.random.choice(dimensions['date']["date_key"])),
-        "warehouse_key": int(np.random.choice(dimensions['warehouses']["warehouse_key"])),
-        "promotion_key": int(np.random.choice(dimensions['promotions']["promotion_key"])),
-        "customer_key": int(np.random.choice(dimensions['customers']["customer_key"])),
-        "location_key": int(np.random.choice(dimensions['locations']["location_key"])),
-        "website_key": int(np.random.choice(dimensions['websites']["website_key"])),
-        "navigation_key": int(np.random.choice(dimensions['navigation']["navigation_key"])),
-        "ship_mode_key": int(np.random.choice(dimensions['ship_modes']["ship_mode_key"])),
-        "total_order_quantity": int(np.random.randint(1, 10)),
-        "line_item_discount_amount": discount_amount,
-        "line_item_sale_amount": sale_price,
-        "line_item_list_price": list_price,
-        "average_line_item_sale": round(np.random.uniform(sale_price * 0.95, sale_price * 1.05), 2),
-        "average_line_item_list_price": round(np.random.uniform(list_price * 0.95, list_price * 1.05), 2)
-    }
+        # convert DataFrame to list of dictionaries
+        sales_data = df.to_dict(orient='records')
+        return sales_data
+    except Exception as e:
+        logger.error(f"Error loading Amazon sales data: {e}")
+        raise
 
 
 class KafkaSalesStreamer:
-    def __init__(self, bootstrap_servers='localhost:9092', topic='sales_events'):
-        self.producer = KafkaProducer(
-            bootstrap_servers=bootstrap_servers,
-            value_serializer=lambda x: json.dumps(x).encode('utf-8'),
-            compression_type="gzip"
-        )
+    def __init__(self, topic=KAFKA_TOPICS):
+        self.producer = create_kafka_producer()
         self.topic = topic
-        self.dimensions = load_dimension_data()
-        self.logger = self._setup_logger()
-
-    def _setup_logger(self):
-        logging.basicConfig(
-            filename="../log.txt",
-            level=logging.INFO,
-            format='%(asctime)s - %(message)s'
-        )
-        return logging.getLogger(__name__)
-
-    def generate_sales_batch(self, batch_size):
-        return [generate_single_sale(self.dimensions) for _ in range(batch_size)]
+        self.sales_data = load_amazon_sales_data()
+        self.current_index = 0
+        self.logger = setup_logger()
 
     def send_sales_events(self, batch_size):
         try:
-            sales_batch = self.generate_sales_batch(batch_size)
-            for sale in sales_batch:
-                self.producer.send(self.topic, value=sale)
+            # ensure we don't exceed the length of the data
+            end_index = min(self.current_index + batch_size, len(self.sales_data))
+            if self.current_index >= len(self.sales_data):
+                raise StopIteration("No more data to send.")
 
-            self.producer.flush()
-            print(f"Sent {batch_size} sales events at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+            sales_batch = self.sales_data[self.current_index:end_index]
+            send_to_kafka(self.producer, self.topic, sales_batch, batch=True)
+            print(f"Sent {len(sales_batch)} Amazon sales events at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+            self.current_index = end_index  # update the current position/ index
         except Exception as e:
             self.logger.error(f"Error sending sales events: {e}")
 
     def start_streaming(self, batch_size, interval):
         try:
-            print(f"Starting sales event streaming to Kafka...")
+            print(f"Starting Amazon sales event streaming to Kafka from CSV")
             print(f"Batch size: {batch_size} events every {interval} seconds")
 
             while True:
                 self.send_sales_events(batch_size)
                 time.sleep(interval)
 
-        except KeyboardInterrupt:
-            print("\nStopping sales event streaming...")
+        except StopIteration as sit:
+            print("\nNo more data to stream. Closing producer and stopping streaming...")
+            self.logger.error(f"Streaming error: {sit}")
+        except KeyboardInterrupt as kb:
+            print("\nStopping Amazon sales event streaming...")
+            self.logger.error(f"Streaming error: {kb}")
+        except Exception as e:
+            print(f"Streaming error: {str(e)}")
+            self.logger.error(f"Streaming error: {e}")
         finally:
-            self.producer.close()
+            close_producer(self.producer)
 
 
 # Producer
 if __name__ == "__main__":
     streamer = KafkaSalesStreamer()
     # Configure Kafka producer settings
-    BATCH_SIZE = 2000
-    INTERVAL_SECONDS = 5  # 2000 messages every 5 secs
+    BATCH_SIZE = 200
+    INTERVAL_SECONDS = 5  # 200 messages every 5 secs
 
     try:
         streamer.start_streaming(

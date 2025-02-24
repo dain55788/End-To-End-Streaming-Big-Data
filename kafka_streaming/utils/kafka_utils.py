@@ -10,51 +10,22 @@ current_script_path = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.dirname(current_script_path)
 data_dir = os.path.join(os.path.dirname(project_root), 'data')
 
-customers_file_path = os.path.join(data_dir, "customer_dimension.csv").replace("\\", "/")
-products_file_path = os.path.join(data_dir, "product_dimension.csv").replace("\\", "/")
-locations_file_path = os.path.join(data_dir, "location_dimension.csv").replace("\\", "/")
-date_file_path = os.path.join(data_dir, "date_dimension.csv").replace("\\", "/")
-time_file_path = os.path.join(data_dir, "time_dimension.csv").replace("\\", "/")
-promotion_file_path = os.path.join(data_dir, "promotion_dimension.csv").replace("\\", "/")
-website_file_path = os.path.join(data_dir, "website_dimension.csv").replace("\\", "/")
-navigation_file_path = os.path.join(data_dir, "navigation_dimension.csv").replace("\\", "/")
-warehouse_file_path = os.path.join(data_dir, "warehouse_dimension.csv").replace("\\", "/")
-ship_mode_file_path = os.path.join(data_dir, "ship_mode_dimension.csv").replace("\\", "/")
-
+AMAZON_SALES_DATA = os.path.join(data_dir, "AmazonSaleReport.csv").replace("\\", "/")
 
 # Kafka Configuration
 KAFKA_BOOTSTRAP_SERVERS = 'localhost:9092'
-KAFKA_TOPICS = {
-    'sales': 'sales_events',
-}
+
+# Logging
+logger = logging.getLogger(__name__)
 
 
-def setup_logger(log_file="../log.txt", max_size_bytes=1024*1024*10, backup_count=3):
-    # Configure and return a logger instance
-    # Create a logger
-    logger = logging.getLogger('KafkaStreamLogger')
-    logger.setLevel(logging.INFO)
-
-    # Clear any existing handlers to prevent duplicate logging
-    logger.handlers.clear()
-
-    # Create a rotating file handler
-    file_handler = RotatingFileHandler(
-        log_file,
-        maxBytes=max_size_bytes,  # 10 MB per file
-        backupCount=backup_count  # Keep 3 backup files
-    )
-
-    # Create a formatter
-    formatter = logging.Formatter(
-        '%(asctime)s - %(levelname)s: %(message)s',
+def setup_logger(log_file="../log.txt"):
+    logging.basicConfig(
+        filename=log_file,
+        level=logging.INFO,
+        format='%(asctime)s - %(levelname)s: %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S'
     )
-    file_handler.setFormatter(formatter)
-
-    # Add the handler to the logger
-    logger.addHandler(file_handler)
-
     return logger
 
 

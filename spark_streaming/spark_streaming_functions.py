@@ -1,134 +1,84 @@
-# Create write stream and directly write stream to Hive every 1 minute
-#
-# def create_write_stream_to_hive(processed_stream, checkpoint_path, table_name, trigger_interval="1 minutes"):
-#     """
-#     Create write stream to Hive table
-#     Parameters:
-#         processed_stream: DataFrame
-#         checkpoint_path: str
-#         table_name: str
-#         trigger_interval: str
-#     Returns:
-#         streaming_query: StreamingQuery
-#     """
-#     try:
-#         def write_to_hive(batch_df, batch_id):
-#             if not batch_df.isEmpty():
-#                 batch_df.write.mode("append").saveAsTable(table_name)
-#
-#         streaming_query = (processed_stream
-#                            .writeStream
-#                            .format("hive")
-#                            .foreachBatch(write_to_hive)
-#                            .option("checkpointLocation", f"{checkpoint_path}/{table_name}")
-#                            .trigger(processingTime=trigger_interval)
-#                            .toTable(table_name)
-#                            .start())
-#
-#         logging.info(f"Successfully created write stream to Hive table: {table_name}")
-#         return streaming_query
-#     except Exception as e:
-#         logging.error(f"Failed to create write stream to Hive because of Error: {e}")
-#         raise
-
 import logging
-
-from cassandra.cluster import Cluster
 from pyspark.sql import SparkSession
+from pyspark import SparkConf, SparkContext
 from pyspark.sql.functions import from_json, col
 from pyspark.sql.types import StructType, StructField, StringType, IntegerType, DoubleType
+import sys
+import warnings
+import traceback
+from delta import *
 
 
-# CREATE CASSANDRA KEYSPACE
-def create_keyspace(session):
-    session.execute("""
-        CREATE KEYSPACE IF NOT EXISTS spark_streams
-        WITH replication = {'class': 'SimpleStrategy', 'replication_factor': '5'};
-    """)
-
-    print("Keyspace created successfully!")
-
-
-# # INSERT DATA FROM SPARK STREAMING TO CASSANDRA
-# def insert_data(session, **kwargs):
-#     print("inserting data...")
-#
-#     user_id = kwargs.get('id')
-#     first_name = kwargs.get('first_name')
-#     last_name = kwargs.get('last_name')
-#     gender = kwargs.get('gender')
-#     address = kwargs.get('address')
-#     postcode = kwargs.get('post_code')
-#     email = kwargs.get('email')
-#     username = kwargs.get('username')
-#     dob = kwargs.get('dob')
-#     registered_date = kwargs.get('registered_date')
-#     phone = kwargs.get('phone')
-#     picture = kwargs.get('picture')
-#
-#     try:
-#         session.execute("""
-#             INSERT INTO spark_streams.sales_fact(id, first_name, last_name, gender, address,
-#                 post_code, email, username, dob, registered_date, phone, picture)
-#                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-#         """, (user_id, first_name, last_name, gender, address,
-#               postcode, email, username, dob, registered_date, phone, picture))
-#         logging.info(f"Data inserted for {first_name} {last_name}")
-#
-#     except Exception as e:
-#         logging.error(f'Could not insert data due to {e}')
-
-
+# Run python spark_streaming/orders_delta_spark_to_minio.py to push data to MinIO (in Delta format)
 # SPARK CONNECTION
-def create_spark_connection(app_name):
+def create_spark_session():
+    """
+    :param
+    Target: Creates the Spark Session with suitable configs
+    Input: Application name
+    Output: Spark session
+    """
     spark_con = None
-
     try:
-        spark_con = SparkSession.builder \
-            .appName(app_name) \
-            .config('spark.jars.packages', "com.datastax.spark:spark-cassandra-connector_2.13:3.4.4,"
-                                           "org.apache.spark:spark-sql-kafka-0-10_2.13:3.4.4") \
-            .config('spark.cassandra.connection.host', 'localhost') \
-            .getOrCreate()
+        builder = SparkSession.builder \
+            .appName("Streaming Kafka") \
+            .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension") \
+            .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
 
-        spark_con.sparkContext.setLogLevel("ERROR")
-        logging.info("Spark connection created successfully!")
+        spark_con = configure_spark_with_delta_pip(builder, extra_packages=[
+            "org.apache.spark:spark-sql-kafka-0-10_2.13:3.4.4,org.apache.hadoop:hadoop-aws:2.8.2"]).getOrCreate()
+        # First jar: enable connection between Spark and Kafka, the latter enable Spark to write data to AWS Services
+        spark.sparkContext.setLogLevel("ERROR")
+        logging.info('Spark session successfully created!')
+
     except Exception as e:
-        logging.error(f"Couldn't create the spark session due to exception {e}")
+        traceback.print_exc(file=sys.stderr)
+        logging.error(f"Couldn't create the spark session due to exception: {e}")
 
     return spark_con
 
 
-# KAFKA CONNECTION TO SPARK
-def connect_to_kafka(spark_con, topic):
+def load_minio_config(spark_context: SparkContext):
+    """
+    Established the necessary configurations to access to MinIO
+    """
+    try:
+        spark_context.jsc.hadoopConfiguration().set("fs.s3a.access.key", "minio_access_key")
+        spark_context.jsc.hadoopConfiguration().set("fs.s3a.secret.key", "minio_secret_key")
+        spark_context.jsc.hadoopConfiguration().set("fs.s3a.endpoint", "http://localhost:9000")
+        spark_context.jsc.hadoopConfiguration().set("fs.s3a.aws.credentials.provider",
+                                                    "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider")
+        spark_context.jsc.hadoopConfiguration().set("fs.s3a.path.style.access", "true")
+        spark_context.jsc.hadoopConfiguration().set("fs.s3a.connection.ssl.enabled", "false")
+        spark_context.jsc.hadoopConfiguration().set("fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
+        spark_context.jsc.hadoopConfiguration().set("fs.s3a.connection.ssl.enabled", "false")
+        logging.info('MinIO configuration is created successfully')
+    except Exception as e:
+        traceback.print_exc(file=sys.stderr)
+        logging.warning(f"MinIO config could not be created successfully due to exception: {e}")
+
+
+# READING STREAM FROM KAFKA
+def connect_to_kafka(spark_session, topic):
+    """
+    :param spark_session: spark connection (spark session)
+    :param topic: Kafka topics
+    :return: spark_df: spark connection to kafka
+    """
     spark_df = None
     try:
-        spark_df = spark_con.readStream \
+        spark_df = spark_session.readStream \
             .format('kafka') \
             .option('kafka.bootstrap.servers', 'localhost:9092') \
             .option('subscribe', topic) \
-            .option("failOnDataLoss", False) \
+            .option("failOnDataLoss", "false") \
             .option('startingOffsets', 'earliest') \
             .load()
         logging.info("kafka dataframe created successfully")
     except Exception as e:
-        logging.warning(f"kafka dataframe could not be created because: {e}")
+        logging.warning(f"kafka dataframe could not be created due to: {e}")
 
     return spark_df
-
-
-# SPARK CONNECTION TO CASSANDRA
-def create_cassandra_connection():
-    try:
-        # connecting to the cassandra cluster
-        cluster = Cluster(['localhost'])
-
-        cas_session = cluster.connect()
-
-        return cas_session
-    except Exception as e:
-        logging.error(f"Could not create cassandra connection due to {e}")
-        return None
 
 
 # CREATING DATAFRAME FROM KAFKA TO SPARK DATA FRAME
@@ -158,5 +108,27 @@ def create_selection_df_from_kafka(spark_df):
     return sel
 
 
-# INSERTING DATA TO DIMENSIONAL TABLES
+def start_streaming(df):
+    """
+    :param
+    Input:
+    Converts data to delta lake format and store into MinIO
+    """
+    minio_bucket = "lakehouse"
 
+    logging.info("Streaming is being started...")
+    stream_query = df.writeStream \
+                        .format("delta") \
+                        .outputMode("append") \
+                        .option("checkpointLocation", f"minio_streaming/{minio_bucket}/sales/checkpoints") \
+                        .option("path", f"s3a://{minio_bucket}/sales") \
+                        .partitionBy("store") \
+                        .start()
+
+    return stream_query.awaitTermination()
+
+
+# Main execution
+if __name__ == '__main__':
+    spark = create_spark_session()
+    load_minio_config(spark.sparkContext)

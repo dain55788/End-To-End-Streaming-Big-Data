@@ -1,6 +1,5 @@
 from spark_streaming_functions import *
 from kafka_streaming.utils.kafka_utils import *
-from cassandra_schema_creation import *
 
 # Run the script using the following command to submit spark job (run in the spark_streaming directory)
 # C:\spark\spark-3.4.4-bin-hadoop3\bin\spark-submit

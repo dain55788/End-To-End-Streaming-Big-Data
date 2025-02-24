@@ -1,6 +1,6 @@
 import os
 from dotenv import load_dotenv
-from postgre_client import PostgreSQLClient
+from sqlserver_to_pg import PostgreSQLClient
 
 load_dotenv()
 

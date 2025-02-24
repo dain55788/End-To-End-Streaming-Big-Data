@@ -7,7 +7,8 @@ version: '3.8'
 services:
   zookeeper:
       image: confluentinc/cp-zookeeper:7.5.0
-      container_name: streaming-zookeeper
+      hostname: zookeeper
+      container_name: zookeeper
       ports:
         - "2181:2181"
       environment:
@@ -23,7 +24,8 @@ services:
 
   broker:
     image: confluentinc/cp-server:7.5.0
-    container_name: streaming-broker
+    hostname: broker
+    container_name: broker
     depends_on:
       zookeeper:
         condition: service_healthy
@@ -44,25 +46,25 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_NUM_PARTITIONS: 10
-      KAFKA_LOG_RETENTION_BYTES: 1073741824  # 1GB
-      KAFKA_SOCKET_RECEIVE_BUFFER_BYTES: 1048576
-      KAFKA_SOCKET_SEND_BUFFER_BYTES: 1048576
-      KAFKA_MAX_MESSAGE_BYTES: 5242880  # 5MB
       KAFKA_JMX_PORT: 9101
       KAFKA_JMX_HOSTNAME: localhost
       KAFKA_CONFLUENT_SCHEMA_REGISTRY_URL: http://schema-registry:8081
       CONFLUENT_METRICS_REPORTER_BOOTSTRAP_SERVERS: broker:29092
       CONFLUENT_METRICS_REPORTER_TOPIC_REPLICAS: 1
-      CONFLUENT_METRICS_ENABLE: 'true'
+      CONFLUENT_METRICS_ENABLE: 'false'
+      CONFLUENT_SUPPORT_CUSTOMER_ID: 'anonymous'
     healthcheck:
       test: [ "CMD", "bash", "-c", 'nc -z localhost 9092' ]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - confluent
 
   schema-registry:
     image: confluentinc/cp-schema-registry:7.5.0
-    container_name: streaming-schema-registry
+    hostname: schema-registry
+    container_name: schema-registry
     depends_on:
       broker:
         condition: service_healthy
@@ -75,17 +77,20 @@ services:
     healthcheck:
       start_period: 10s
       interval: 10s
-      retries: 20
-      test: curl --user superUser:superUser --fail --silent --insecure http://localhost:8081/subjects --output /dev/null || exit 1
+      retries: 5
+      test: [ "CMD", "curl", "-f", "http://localhost:8081/" ]
+    networks:
+      - confluent
 
   control-center:
-    image: confluentinc/cp-enterprise-control-center:7.4.0
+    image: confluentinc/cp-enterprise-control-center:7.5.0
     hostname: control-center
     container_name: control-center
     depends_on:
-      - broker
-      - schema-registry
-      - debezium
+      broker:
+        condition: service_healthy
+      schema-registry:
+        condition: service_healthy
     ports:
       - "9021:9021"
     environment:
@@ -94,90 +99,72 @@ services:
       CONTROL_CENTER_REPLICATION_FACTOR: 1
       CONTROL_CENTER_INTERNAL_TOPICS_PARTITIONS: 1
       CONTROL_CENTER_MONITORING_INTERCEPTOR_TOPIC_PARTITIONS: 1
-      CONTROL_CENTER_CONNECT_HEALTHCHECK_ENDPOINT: "/connectors"
       CONFLUENT_METRICS_TOPIC_REPLICATION: 1
+      CONFLUENT_METRICS_ENABLE: 'false'
       PORT: 9021
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:9021/health" ]
       interval: 30s
       timeout: 10s
       retries: 5
+    networks:
+      - confluent
 
-  # Debezium configuration for capturing changes in Pg Database
-  # then stream them to Kafka
-  debezium:
-    image: debezium/connect:1.9
-    container_name: streaming-debezium
-    depends_on:
-      broker:
-        condition: service_healthy
-      schema-registry:
-        condition: service_healthy
-      zookeeper:
-        condition: service_healthy
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "curl",
-          "--silent",
-          "--fail",
-          "-X",
-          "GET",
-          "http://localhost:8083/connectors",
-        ]
-      start_period: 10s
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    ports:
-      - "8083:8083"
-    environment:
-      BOOTSTRAP_SERVERS: broker:29092
-      GROUP_ID: 1
-      CONFIG_STORAGE_TOPIC: connect_configs
-      OFFSET_STORAGE_TOPIC: connect_offsets
-      # Set to Avro for higher performance
-      # KEY_CONVERTER: io.confluent.connect.avro.AvroConverter
-      # VALUE_CONVERTER: io.confluent.connect.avro.AvroConverter
-      KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
-      VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
-      CONNECT_KEY_CONVERTER_SCHEMA_REGISTRY_URL: http://schema-registry:8081
-      CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: http://schema-registry:8081
-      CONNECT_TOPIC_CREATION_ENABLE: true
-
-  # Debezium UI
-  debezium-ui:
-    image: debezium/debezium-ui:latest
-    container_name: debezium-ui
-    hostname: debezium-ui
-    depends_on:
-      debezium:
-        condition: service_healthy
-    ports:
-      - "8085:8080"
-    environment:
-      KAFKA_CONNECT_URIS: http://debezium:8083
-
-  postgresql:
-    # Set wal_level from replica (default) to logical
-    # so that Debezium can capture change
-    image: postgres:latest
-    command: [ "postgres", "-c", "wal_level=logical" ]
-    container_name: streaming-postgresql
-    healthcheck:
-      test: [ "CMD", "psql", "-U", "k6", "-c", "SELECT 1" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    ports:
-      - "5432:5432"
-    environment:
-      - POSTGRES_DB=k6
-      - POSTGRES_USER=k6
-      - POSTGRES_PASSWORD=k6
-    volumes:
-      - cdc_postgres_data:/var/lib/postgresql/data
+#  # Debezium configuration for capturing changes in Pg Database
+#  # then stream them to Kafka
+#  debezium:
+#    image: debezium/connect:1.9
+#    container_name: streaming-debezium
+#    depends_on:
+#      broker:
+#        condition: service_healthy
+#      schema-registry:
+#        condition: service_healthy
+#      zookeeper:
+#        condition: service_healthy
+#    healthcheck:
+#      test:
+#        [
+#          "CMD",
+#          "curl",
+#          "--silent",
+#          "--fail",
+#          "-X",
+#          "GET",
+#          "http://localhost:8083/connectors",
+#        ]
+#      start_period: 10s
+#      interval: 10s
+#      timeout: 5s
+#      retries: 5
+#    ports:
+#      - "8083:8083"
+#    environment:
+#      BOOTSTRAP_SERVERS: broker:29092
+#      GROUP_ID: 1
+#      CONFIG_STORAGE_TOPIC: connect_configs
+#      OFFSET_STORAGE_TOPIC: connect_offsets
+#      # Set to Avro for higher performance
+#      # KEY_CONVERTER: io.confluent.connect.avro.AvroConverter
+#      # VALUE_CONVERTER: io.confluent.connect.avro.AvroConverter
+#      KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+#      VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+#      CONNECT_KEY_CONVERTER_SCHEMA_REGISTRY_URL: http://schema-registry:8081
+#      CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: http://schema-registry:8081
+#      CONNECT_TOPIC_CREATION_ENABLE: true
+#
+#  # Debezium UI
+#  debezium-ui:
+#    image: debezium/debezium-ui:latest
+#    container_name: debezium-ui
+#    hostname: debezium-ui
+#    depends_on:
+#      debezium:
+#        condition: service_healthy
+#    ports:
+#      - "8085:8080"
+#    environment:
+#      KAFKA_CONNECT_URIS: http://debezium:8083
 
 #  spark-master:
 #    <<: *spark-common
@@ -202,19 +189,8 @@ services:
 #  spark-worker-2:
 #    <<: *spark-worker-image
 
-#  cassandra_db:
-#    image: cassandra:latest
-#    container_name: cassandra
-#    hostname: cassandra
-#    ports:
-#      - "9042:9042"
-#    environment:
-#      - MAX_HEAP_SIZE=1G
-#      - HEAP_NEWSIZE=512MB
-#      - CASSANDRA_USERNAME=dainy
-#      - CASSANDRA_PASSWORD=dainy
-#    networks:
-#      - confluent
+#volumes:
+#  cdc_postgres_data:
 
-volumes:
-  cdc_postgres_data:
+networks:
+  confluent:
