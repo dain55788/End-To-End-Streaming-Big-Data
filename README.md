@@ -3,7 +3,7 @@
 
 ## Top Contents:
 + Streaming Big Amount of Data using Kafka and SparkStreaming.
-+ Managing Apache Kafka with Control Center, Apache Zookeeper and Schema Registry.
++ Managing Apache Kafka with Confluent Control Center, Apache Zookeeper and Schema Registry.
 + Automated Medallion Architecture using Data Orchestration Tools (Apache Airflow)
 + Processing Data Lake using DeltaLake, Object Storage with MinIO.
 + Distributed query engine Trino with DBeaver for high query performance.
@@ -32,7 +32,10 @@ This project uses fake created fact data related to e-commerce platform while st
 ## Setup
 ### Pre-requisites: 
 + First, you'll have your Pycharm IDE, Docker, Apache Kafka, Apache Spark and Apache Airflow setup in your project.
-+ Launch Docker, run event_streaming python file in Kafka events
++ In your terminal, create a python virtual environment to work with, run (if you are using Windows):
+1. python -m venv venv
+2. venv\Scripts\activate
++ Launch Docker, run event_streaming python file in Kafka events.
 
 ### How can I make this better?!
 A lot can still be done :)
