@@ -11,6 +11,7 @@ warnings.filterwarnings('ignore')
 
 
 # Run python spark_streaming/orders_delta_spark_to_minio.py to push data to MinIO (in Delta format)
+# Create the MinIO bucket before running this
 # SPARK CONNECTION
 def create_spark_session():
     from pyspark.sql import SparkSession
@@ -92,7 +93,7 @@ def creare_final_dataframe(spark_session, df):
     :return: final dataframe that spark uses to load to minio
     target: modify the initial dataframe to create final dataframe
     """
-    from pyspark.sql.functions import from_json, col
+    from pyspark.sql.functions import from_json, col, current_timestamp
     from pyspark.sql.types import StructType, StructField, StringType, IntegerType, DoubleType
     schema = StructType([
         StructField("index", IntegerType(), False),
@@ -123,7 +124,8 @@ def creare_final_dataframe(spark_session, df):
     # Parse JSON from Kafka and apply schema
     parsed_df = df.selectExpr("CAST(value AS STRING) as json") \
         .select(from_json(col("json"), schema).alias("data")) \
-        .select("data.*")
+        .select("data.*") \
+        .withColumn("ingestion_timestamp", current_timestamp())
 
     return parsed_df
 
@@ -135,14 +137,16 @@ def start_streaming(df):
     Converts data to delta lake format and store into MinIO
     """
     minio_bucket = "lakehouse"
+    bronze_layer_path = f"s3a://{minio_bucket}/sales_bronze"
 
     logging.info("Streaming is being started...")
     stream_query = df.writeStream \
                         .format("delta") \
                         .outputMode("append") \
-                        .option("checkpointLocation", f"minio_streaming/{minio_bucket}/sales/checkpoints") \
-                        .option("path", f"s3a://{minio_bucket}/sales") \
-                        .partitionBy("store") \
+                        .option("checkpointLocation", f"s3a://{minio_bucket}/checkpoints/sales_bronze") \
+                        .option("path", bronze_layer_path) \
+                        .partitionBy("Date") \
+                        .trigger(processingTime="1 minute") \
                         .start()
 
     return stream_query.awaitTermination()

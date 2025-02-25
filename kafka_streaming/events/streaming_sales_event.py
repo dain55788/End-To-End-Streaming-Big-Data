@@ -10,7 +10,7 @@ NUM_PARTITIONS = 10
 REPLICATION_FACTOR = 1
 
 
-# Load Amazon sales data
+# Load Amazon sales_bronze data
 def load_amazon_sales_data(file_path=AMAZON_SALES_DATA):
     try:
         df = pd.read_csv(file_path, low_memory=False)
@@ -30,7 +30,7 @@ def load_amazon_sales_data(file_path=AMAZON_SALES_DATA):
         sales_data = df.to_dict(orient='records')
         return sales_data
     except Exception as e:
-        logger.error(f"Error loading Amazon sales data: {e}")
+        logger.error(f"Error loading Amazon sales_bronze data: {e}")
         raise
 
 
@@ -51,14 +51,14 @@ class KafkaSalesStreamer:
 
             sales_batch = self.sales_data[self.current_index:end_index]
             send_to_kafka(self.producer, self.topic, sales_batch, batch=True)
-            print(f"Sent {len(sales_batch)} Amazon sales events at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+            print(f"Sent {len(sales_batch)} Amazon sales_bronze events at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
             self.current_index = end_index  # update the current position/ index
         except Exception as e:
-            self.logger.error(f"Error sending sales events: {e}")
+            self.logger.error(f"Error sending sales_bronze events: {e}")
 
     def start_streaming(self, batch_size, interval):
         try:
-            print(f"Starting Amazon sales event streaming to Kafka from CSV")
+            print(f"Starting Amazon sales_bronze event streaming to Kafka from CSV")
             print(f"Batch size: {batch_size} events every {interval} seconds")
 
             while True:
@@ -69,7 +69,7 @@ class KafkaSalesStreamer:
             print("\nNo more data to stream. Closing producer and stopping streaming...")
             self.logger.error(f"Streaming error: {sit}")
         except KeyboardInterrupt as kb:
-            print("\nStopping Amazon sales event streaming...")
+            print("\nStopping Amazon sales_bronze event streaming...")
             self.logger.error(f"Streaming error: {kb}")
         except Exception as e:
             print(f"Streaming error: {str(e)}")

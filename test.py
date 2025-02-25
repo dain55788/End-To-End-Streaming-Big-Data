@@ -6,5 +6,5 @@ from kafka_streaming.utils.kafka_utils import *
 username = 'nguyendai'
 
 # Kafka Topics
-SALES_EVENTS_TOPIC = KAFKA_TOPICS["sales"]
+SALES_EVENTS_TOPIC = KAFKA_TOPICS["sales_bronze"]
 print(SALES_EVENTS_TOPIC)
