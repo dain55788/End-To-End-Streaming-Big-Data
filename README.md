@@ -1,5 +1,5 @@
 # End-To-End-Streaming-Big-Data
-## End-To-End Streaming Big Data Project makes processing big data easy with Airflow, Kafka, Spark, MinIO and much more!!
+## End-To-End Streaming Big Data Project makes big data processing easy with Airflow, Kafka, Spark, MinIO and much more!!
 
 ## Top Contents:
 + Streaming Big Amount of Data using Kafka and SparkStreaming.
@@ -19,14 +19,15 @@ This project uses Amazon Sales Report data, you can find the data here: https://
 + Streaming Data Process: Apache Kafka, Apache Spark.
 + IDE: Pycharm
 + Programming Languages: Python.
-+ Data Orchestration Tool: Apache Airflow
-+ Data Lake/ Data Lakehouse: DeltaLake, MinIO
-+ Data Visualization Tool: Superset
++ Data Orchestration Tool: Apache Airflow.
++ Data Lake/ Data Lakehouse: DeltaLake, MinIO.
++ Data Visualization Tool: Superset.
 + Containerization: Docker, Docker Compose.
-+ Query Engine: DBeaver, Trino
++ Query Engine: DBeaver, Trino.
++ Data Transformation and Data Warehousing: dbt, Snowflake
 
 ## Architecture
-![SystemArchitecture](https://github.com/user-attachments/assets/b19d920e-1bf2-4148-93ad-559bb2f0d451)
+![SystemArchitecture](https://github.com/user-attachments/assets/8dcc3bc9-bd58-4702-b33e-d1bc65a2d095)
 
 ## Setup
 ### Pre-requisites: 
@@ -55,6 +56,5 @@ A lot can still be done :)
   + Cloud Composer for Airflow, Kafka and Spark using AWS.
 + Kafka Streaming process monitering with Prometheus and Grafana.
 + Include CI/CD Operations.
-+ OLAP Operations for higher query performance with data warehouse (Snowflake, Clickhouse).
 + Write data quality tests.
 + Storage Layer Deployment with AWS S3 and Terraform.
