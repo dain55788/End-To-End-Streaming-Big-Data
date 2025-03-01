@@ -1,4 +1,5 @@
 airflow/.env
 venv
-
+spark_streaming/log.txt
+kafka_streaming/log.txt
 .idea/

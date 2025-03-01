@@ -47,15 +47,15 @@ def load_minio_config(spark_context: SparkContext):
     Established the necessary configurations to access to MinIO
     """
     try:
-        spark_context.jsc.hadoopConfiguration().set("fs.s3a.access.key", "minio_access_key")
-        spark_context.jsc.hadoopConfiguration().set("fs.s3a.secret.key", "minio_secret_key")
-        spark_context.jsc.hadoopConfiguration().set("fs.s3a.endpoint", "http://localhost:9000")
-        spark_context.jsc.hadoopConfiguration().set("fs.s3a.aws.credentials.provider",
-                                                    "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider")
-        spark_context.jsc.hadoopConfiguration().set("fs.s3a.path.style.access", "true")
-        spark_context.jsc.hadoopConfiguration().set("fs.s3a.connection.ssl.enabled", "false")
-        spark_context.jsc.hadoopConfiguration().set("fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
-        spark_context.jsc.hadoopConfiguration().set("fs.s3a.connection.ssl.enabled", "false")
+        spark_context._jsc.hadoopConfiguration().set("fs.s3a.access.key", "minio_access_key")
+        spark_context._jsc.hadoopConfiguration().set("fs.s3a.secret.key", "minio_secret_key")
+        spark_context._jsc.hadoopConfiguration().set("fs.s3a.endpoint", "http://localhost:9000")
+        spark_context._jsc.hadoopConfiguration().set("fs.s3a.aws.credentials.provider",
+                                                     "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider")
+        spark_context._jsc.hadoopConfiguration().set("fs.s3a.path.style.access", "true")
+        spark_context._jsc.hadoopConfiguration().set("fs.s3a.connection.ssl.enabled", "false")
+        spark_context._jsc.hadoopConfiguration().set("fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
+        spark_context._jsc.hadoopConfiguration().set("fs.s3a.connection.ssl.enabled", "false")
         logging.info('MinIO configuration is created successfully')
     except Exception as e:
         traceback.print_exc(file=sys.stderr)
@@ -86,9 +86,8 @@ def create_initial_dataframe(spark_session, topic):
 
 
 # CREATING FINAL DATAFRAME STREAM FROM KAFKA TO SPARK
-def creare_final_dataframe(spark_session, df):
+def creare_final_dataframe(df):
     """
-    :param spark_session:
     :param df:
     :return: final dataframe that spark uses to load to minio
     target: modify the initial dataframe to create final dataframe

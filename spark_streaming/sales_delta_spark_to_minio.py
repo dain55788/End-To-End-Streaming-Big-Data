@@ -17,7 +17,7 @@ load_minio_config(spark_con.sparkContext)
 
 # READING AND PROCESSING KAFKA STREAMING DATA
 initial_df = create_initial_dataframe(spark_con, AMAZON_SALES)
-final_df = creare_final_dataframe(initial_df, AMAZON_SALES)
+final_df = creare_final_dataframe(initial_df)
 
 # START STREAMING
 start_streaming(final_df)

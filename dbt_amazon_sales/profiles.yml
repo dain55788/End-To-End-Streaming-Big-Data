@@ -1,0 +1,11 @@
+dbt_amazon_sales:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: "localhost"
+      user: "postgres"
+      password: "123456"
+      port: 5432
+      dbname: "amazon_sales_dwh"
+      schema: "public"
