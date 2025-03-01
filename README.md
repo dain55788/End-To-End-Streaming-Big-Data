@@ -5,7 +5,9 @@
 + Streaming Big Amount of Data using Kafka and SparkStreaming.
 + Managing Apache Kafka with Confluent Control Center, Apache Zookeeper and Schema Registry.
 + Processing Data Lake using DeltaLake, Object Storage with MinIO.
-+ Automated Medallion Architecture Implementation on the dataset using DBT and Airflow.
++ ELT Pipeline:
+  + Automated Medallion Architecture Implementation on the dataset using Dbt and Airflow.
+  + Data Modeling with PostgreSQL and Dbt
 + Distributed query engine Trino with DBeaver for high query performance.
 + Data Visualization Tools with Superset.
 + Project Report.
@@ -24,10 +26,11 @@ This project uses Amazon Sales Report data, you can find the data here: https://
 + Data Visualization Tool: Superset.
 + Containerization: Docker, Docker Compose.
 + Query Engine: DBeaver, Trino.
-+ Data Transformation and Data Warehousing: dbt, Snowflake
++ Data Transformation and Data Warehousing: dbt, PostgreSQL
 
 ## Architecture
-![SystemArchitecture](https://github.com/user-attachments/assets/8dcc3bc9-bd58-4702-b33e-d1bc65a2d095)
+![SystemArchitecture](https://github.com/user-attachments/assets/09d4f66f-62ec-47fc-a7a5-e872c35eca49)
+
 
 ## Setup
 ### Pre-requisites: 
@@ -40,7 +43,11 @@ This project uses Amazon Sales Report data, you can find the data here: https://
 + Run event_streaming python file in Kafka events.
 4. Run the command: python spark_streaming/sales_delta_spark_to_minio.py (submiting spark job and stream the data to MinIO)
 5. Access the service:
-  + Kafka Control Center is accessible at `http://localhost:9021`.
+  + Confluent Control Center for Kafka is accessible at `http://localhost:9021`.
+
+![ConfluentControlCenter](https://github.com/user-attachments/assets/afb99b8d-e892-4055-93de-16863da25c61)
+
+
   + MinIO is accessible at `http://localhost:9001`.
 
 ![MinIO-UI](https://github.com/user-attachments/assets/be80d18f-8a63-4bf1-9bfc-1e1bdc6c9bdf)
