@@ -1,0 +1,6 @@
+# dbt-labs/dbt_utils: This dbt package contains macros that can be (re)used across dbt projects.
+# Run dbt deps to install the package.
+# macros: like functional programming in Programming Languages.
+packages:
+  - package: dbt-labs/dbt_utils
+    version: 1.3.0
