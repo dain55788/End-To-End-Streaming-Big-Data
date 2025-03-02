@@ -65,3 +65,6 @@ A lot can still be done :)
 + Include CI/CD Operations.
 + Write data quality tests.
 + Storage Layer Deployment with AWS S3 and Terraform.
+
+---
+<p>&copy; 2025 Nguyen  Dai</p>
