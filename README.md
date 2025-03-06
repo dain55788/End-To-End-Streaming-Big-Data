@@ -6,8 +6,8 @@
 + Managing Apache Kafka with Confluent Control Center, Apache Zookeeper and Schema Registry.
 + Processing Data Lake using DeltaLake, Object Storage with MinIO.
 + ELT Pipeline:
-  + Automated Medallion Architecture Implementation on the dataset using Dbt and Airflow.
-  + Data Modeling with PostgreSQL and Dbt
+  + Automated Medallion Architecture Implementation on the dataset Airflow.
+  + Data Modeling and Data Warehousing with PostgreSQL and Dbt
 + Distributed query engine Trino with DBeaver for high query performance.
 + Data Visualization Tools with Superset.
 + Project Report.
@@ -18,7 +18,7 @@ This project uses Amazon Sales Report data, you can find the data here: https://
 ## Star Schema Model
 
 ## Tools & Technologies
-+ Streaming Data Process: Apache Kafka, Apache Spark.
++ Streaming, Batching Data Process: Apache Kafka, Apache Spark.
 + IDE: Pycharm
 + Programming Languages: Python.
 + Data Orchestration Tool: Apache Airflow.
@@ -26,10 +26,10 @@ This project uses Amazon Sales Report data, you can find the data here: https://
 + Data Visualization Tool: Superset.
 + Containerization: Docker, Docker Compose.
 + Query Engine: DBeaver, Trino.
-+ Data Transformation and Data Warehousing: dbt, PostgreSQL
++ Data Transformation, Data Modeling and Data Warehousing: dbt, PostgreSQL
 
 ## Architecture
-![SystemArchitecture](https://github.com/user-attachments/assets/09d4f66f-62ec-47fc-a7a5-e872c35eca49)
+![SystemArchitecture](https://github.com/user-attachments/assets/69b277f4-deb7-4a97-89af-823fdf1feb13)
 
 
 ## Setup
