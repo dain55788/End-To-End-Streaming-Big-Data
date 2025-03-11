@@ -140,7 +140,7 @@ def start_streaming(df):
 
     logging.info("Streaming is being started...")
     stream_query = df.writeStream \
-                        .format("delta") \
+                        .format("parquet") \
                         .outputMode("append") \
                         .option("checkpointLocation", f"s3a://{minio_bucket}/checkpoints/sales_bronze") \
                         .option("path", bronze_layer_path) \
