@@ -1,5 +1,9 @@
 airflow/.env
 venv
-spark_streaming/log.txt
+**/log.txt
 kafka_streaming/log.txt
 .idea/
+jars/
+**/logs/
+test.py
+**/__pycache__/
