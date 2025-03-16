@@ -144,7 +144,6 @@ def start_streaming(df):
                         .outputMode("append") \
                         .option("checkpointLocation", f"s3a://{minio_bucket}/checkpoints/sales_bronze") \
                         .option("path", bronze_layer_path) \
-                        .partitionBy("Date") \
                         .trigger(processingTime="1 minute") \
                         .start()
 

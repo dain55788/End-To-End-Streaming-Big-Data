@@ -4,6 +4,10 @@ streaming_up:
 streaming_down:
 	docker compose -f docker-compose.yaml down
 
+# MinIO bucket
+create_bucket:
+	python scripts/create_bucket.py
+
 airflow_up:
 	docker compose -f airflow-docker-compose.yaml up -d
 
