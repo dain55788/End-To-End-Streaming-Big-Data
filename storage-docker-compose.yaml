@@ -1,5 +1,5 @@
 version: "3.8"
-# Docker compose for Trino - Hive Metastore - Superset - MinIO.
+# Docker compose for Trino - Hive Metastore - MinIO.
 
 services:
   trino:
@@ -9,22 +9,10 @@ services:
     image: "trinodb/trino:410"
     hostname: trino
     volumes:
-      - ./trino-config/etc:/usr/lib/trino/etc:ro
-      - ./trino-config/catalog:/etc/trino/catalog
+      - ./trino/etc:/usr/lib/trino/etc:ro
+      - ./trino/catalog:/etc/trino/catalog
     depends_on:
       - hive-metastore
-
-#  superset:
-#    build:
-#      context: ./
-#      dockerfile: ./Dockerfile
-#    container_name: superset
-#    #    env_file:
-#    #      - ../.env
-#    ports:
-#      - '8088:8088'
-#    networks:
-#      - data_network
 
   # use PostgreSQL to store Hive metadata
   metastore_db:
@@ -38,6 +26,7 @@ services:
       POSTGRES_PASSWORD: hive
       POSTGRES_DB: metastore
 
+  # Hive Metastore - service to get and store metadata about db, table definition, ...
   hive-metastore:
     container_name: datalake-hive-metastore
     image: 'starburstdata/hive:3.1.2-e.18'
