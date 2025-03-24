@@ -22,8 +22,8 @@ services:
     ports:
       - "5433:5432" # Access via Thrift protocol
     environment:
-      POSTGRES_USER: hive
-      POSTGRES_PASSWORD: hive
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 123456
       POSTGRES_DB: metastore
 
   # Hive Metastore - service to get and store metadata about db, table definition, ...
@@ -77,22 +77,6 @@ services:
       MINIO_SECRET_KEY: minio_secret_key
     command: server --console-address ":9001" /data
 
-#  mc:
-#    depends_on:
-#      - minio
-#    image: minio/mc
-#    environment:
-#      - AWS_ACCESS_KEY_ID=admin
-#      - AWS_SECRET_ACCESS_KEY=password
-#      - AWS_REGION=us-east-1
-#    entrypoint: >
-#      /bin/sh -c "
-#      until (/usr/bin/mc config host add minio http://minio:9000 admin password) do echo '...waiting...' && sleep 1; done;
-#      /usr/bin/mc rm -r --force minio/warehouse;
-#      /usr/bin/mc mb minio/warehouse;
-#      /usr/bin/mc policy set public minio/warehouse;
-#      tail -f /dev/null
-#      "
 
 volumes:
   minio_storage:
